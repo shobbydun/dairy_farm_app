@@ -81,7 +81,8 @@ class _HomePageState extends State<HomePage> {
   Future<void> _signOut() async {
     try {
       await FirebaseAuth.instance.signOut();
-      Navigator.pushReplacementNamed(context, '/login'); // Replace with your login page route
+      Navigator.pushReplacementNamed(
+          context, '/login'); // Replace with your login page route
     } catch (e) {
       print("Error signing out: $e");
     }
@@ -91,7 +92,8 @@ class _HomePageState extends State<HomePage> {
     return Card(
       color: const Color.fromARGB(255, 64, 196, 255),
       shape: RoundedRectangleBorder(
-        side: const BorderSide(color: Color.fromARGB(255, 2, 95, 171), width: 1),
+        side:
+            const BorderSide(color: Color.fromARGB(255, 2, 95, 171), width: 1),
         borderRadius: BorderRadius.circular(4.0),
       ),
       margin: const EdgeInsets.all(8.0),
@@ -223,14 +225,15 @@ class _HomePageState extends State<HomePage> {
                   titlesData: FlTitlesData(
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
-                        showTitles: true,
+                        showTitles: false,
                         reservedSize: 20,
                         getTitlesWidget: (value, meta) {
                           return Padding(
                             padding: const EdgeInsets.only(top: 5.0),
                             child: Text(
                               value.toInt().toString(),
-                              style: const TextStyle(color: Colors.black, fontSize: 12),
+                              style: const TextStyle(
+                                  color: Colors.black, fontSize: 12),
                             ),
                           );
                         },
@@ -243,14 +246,15 @@ class _HomePageState extends State<HomePage> {
                     ),
                     rightTitles: AxisTitles(
                       sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 40,
+                        showTitles: false,
+                        reservedSize: 43,
                         getTitlesWidget: (value, meta) {
                           return Padding(
                             padding: const EdgeInsets.only(left: 0.0, top: 0),
                             child: Text(
                               '${value.toInt()}',
-                              style: const TextStyle(color: Colors.black, fontSize: 14),
+                              style: const TextStyle(
+                                  color: Colors.black, fontSize: 14),
                             ),
                           );
                         },
@@ -260,22 +264,43 @@ class _HomePageState extends State<HomePage> {
                   borderData: FlBorderData(show: false),
                   barGroups: widget.barChartData.map((barGroup) {
                     return barGroup.copyWith(
-                      barsSpace: 4, // Adjust space between bars
-                      showingTooltipIndicators: [0],
+                      barsSpace: 1, // Adjust space between bars
+                      showingTooltipIndicators: [], // Show tooltip only on touch
+                      barRods: barGroup.barRods.map((barRod) {
+                        return barRod.copyWith(
+                          toY: barRod.toY,
+                          width: 55, // Adjust the width to make bars thicker
+                          borderRadius:
+                              BorderRadius.circular(7), // No rounded corners
+                        );
+                      }).toList(),
                     );
                   }).toList(),
                   barTouchData: BarTouchData(
                     touchTooltipData: BarTouchTooltipData(
                       tooltipPadding: EdgeInsets.all(8),
+                      //tooltipBgColor: Colors.blue, // Background color of tooltip
                       getTooltipItem: (group, groupIndex, rod, rodIndex) {
                         return BarTooltipItem(
-                          '${group.x.toInt()}: ${rod.toY.toStringAsFixed(2)}',
+                          '${rod.toY.toStringAsFixed(2)}',
                           TextStyle(color: Colors.white),
                         );
                       },
                     ),
                     touchCallback:
-                        (FlTouchEvent event, BarTouchResponse? response) {},
+                        (FlTouchEvent event, BarTouchResponse? response) {
+                      if (event is FlTapUpEvent && response != null) {
+                        // Show tooltip on touch
+                        final touchedBarIndex =
+                            response.spot?.touchedBarGroupIndex ?? -1;
+                        if (touchedBarIndex != -1) {
+                          // Force a rebuild or update state if needed to show tooltip
+                          setState(() {
+                            // Update the state if needed
+                          });
+                        }
+                      }
+                    },
                     handleBuiltInTouches: true,
                   ),
                 ),
@@ -322,83 +347,111 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildExpenseOverviewCard(BuildContext context) {
-    return Card(
-      color: const Color.fromARGB(255, 64, 196, 255),
-      shape: RoundedRectangleBorder(
-        side: const BorderSide(color: Colors.blue, width: 1),
-        borderRadius: BorderRadius.circular(4.0),
-      ),
-      margin: const EdgeInsets.all(8.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const Text(
+
+Widget _buildExpenseOverviewCard(BuildContext context) {
+  final double chartWidth = 12 * 40.0;
+
+  return Card(
+    color: const Color.fromARGB(255, 64, 196, 255),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(4.0),
+    ),
+    margin: const EdgeInsets.all(8.0),
+    child: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0), // Increased padding
+            child: const Text(
               'Expense Overview',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20), // Increased font size
             ),
-            SizedBox(
-              height: 200,
-              child: LineChart(
-                LineChartData(
-                  lineBarsData: widget.lineChartData.map((lineBarData) {
-                    return lineBarData.copyWith(
-                      isCurved: true,
-                      //colors: [Colors.blue],
-                      dotData: FlDotData(show: true),
-                      belowBarData: BarAreaData(show: false),
-                      aboveBarData: BarAreaData(show: false),
-                      barWidth: 4, // Make lines thicker
-                    );
-                  }).toList(),
-                  titlesData: FlTitlesData(
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 40,
-                        getTitlesWidget: (value, meta) {
-                          return SideTitleWidget(
-                            axisSide: meta.axisSide,
-                            child: Text(
-                              DateFormat('MMM dd').format(DateTime.fromMillisecondsSinceEpoch(value.toInt())),
-                              style: const TextStyle(color: Colors.black, fontSize: 12),
-                            ),
-                          );
-                        },
+          ),
+          SizedBox(
+            height: 200,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: chartWidth, // Width to enable scrolling
+                child: LineChart(
+                  LineChartData(
+                    lineBarsData: widget.lineChartData.map((lineBarData) {
+                      return lineBarData.copyWith(
+                        isCurved: true,
+                        dotData: FlDotData(show: true),
+                        belowBarData: BarAreaData(show: false),
+                        aboveBarData: BarAreaData(show: false),
+                        barWidth: 5, 
+                      );
+                    }).toList(),
+                    titlesData: FlTitlesData(
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 30, 
+                          interval: 1, 
+                          getTitlesWidget: (value, meta) {
+                            final monthIndex = value.toInt();
+                            final date = DateTime(2024, monthIndex + 1);
+                            return SideTitleWidget(
+                              axisSide: meta.axisSide,
+                              child: Text(
+                                DateFormat('MMM').format(date),
+                                style: const TextStyle(
+                                    color: Colors.black, fontSize: 12),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 50,
+                          getTitlesWidget: (value, meta) {
+                            return SideTitleWidget(
+                              axisSide: meta.axisSide,
+                              child: Text(
+                                '${value.toInt()}',
+                                style: const TextStyle(
+                                    color: Colors.black, fontSize: 12),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      topTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: false, // Hide top titles
+                        ),
+                      ),
+                      rightTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: false, // Hide right titles
+                        ),
                       ),
                     ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 40,
-                        getTitlesWidget: (value, meta) {
-                          return SideTitleWidget(
-                            axisSide: meta.axisSide,
-                            child: Text(
-                              '${value.toInt()}',
-                              style: const TextStyle(color: Colors.black, fontSize: 12),
-                            ),
-                          );
-                        },
+                    borderData: FlBorderData(
+                      show: false, // Hide the border
+                    ),
+                    gridData: FlGridData(
+                      show: false, // Hide the grid lines
+                    ),
+                    lineTouchData: LineTouchData(
+                      touchTooltipData: LineTouchTooltipData(
                       ),
                     ),
                   ),
-                  borderData: FlBorderData(
-                    show: true,
-                    border: Border.all(
-                      color: const Color.fromARGB(255, 2, 95, 171),
-                      width: 1,
-                    ),
-                  ),
-                  gridData: FlGridData(show: true),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
+
 }

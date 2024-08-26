@@ -116,133 +116,401 @@ class ReportsPage extends StatelessWidget {
   Widget _buildIncomeChart() {
     return LineChart(
       LineChartData(
-        titlesData: FlTitlesData(show: true),
-        borderData: FlBorderData(show: true),
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                final monthIndex = value.toInt();
+                final months = [
+                  'Jan',
+                  'Feb',
+                  'Mar',
+                  'Apr'
+                ]; // Update with actual months
+                if (monthIndex < months.length) {
+                  return SideTitleWidget(
+                    axisSide: meta.axisSide,
+                    child: Text(
+                      months[monthIndex],
+                      style: const TextStyle(color: Colors.black, fontSize: 12),
+                    ),
+                  );
+                } else {
+                  return SideTitleWidget(
+                    axisSide: meta.axisSide,
+                    child: const Text(''),
+                  );
+                }
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 50,
+              getTitlesWidget: (value, meta) {
+                return SideTitleWidget(
+                  axisSide: meta.axisSide,
+                  child: Text(
+                    value.toInt() > 0 ? '${value.toInt()}' : '',
+                    style: const TextStyle(color: Colors.black, fontSize: 12),
+                  ),
+                );
+              },
+            ),
+          ),
+          topTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+        borderData: FlBorderData(show: false),
         lineBarsData: [
           LineChartBarData(
             spots: const [
-              FlSpot(1, 3),
-              FlSpot(2, 6),
-              FlSpot(3, 4),
-              FlSpot(4, 7),
+              FlSpot(0, 3000),
+              FlSpot(1, 6000),
+              FlSpot(2, 4000),
+              FlSpot(3, 7000),
             ],
-            isCurved: true,
-            barWidth: 10,
+            isCurved: false,
+            barWidth: 5,
             color: Colors.blue,
             dotData: FlDotData(show: true),
             belowBarData: BarAreaData(show: false),
           ),
         ],
-        gridData: FlGridData(show: true),
+        gridData: FlGridData(show: false),
       ),
     );
   }
 
   Widget _buildExpenseChart() {
-    return BarChart(
-      BarChartData(
-        titlesData: FlTitlesData(show: true),
-        borderData: FlBorderData(show: true),
-        barGroups: [
-          BarChartGroupData(
-            x: 1,
-            barRods: [
-              BarChartRodData(
-                toY: 6,
-                color: Colors.red,
-                width: 35,
-              ),
-            ],
-          ),
-          BarChartGroupData(
-            x: 2,
-            barRods: [
-              BarChartRodData(
-                toY: 7,
-                color: Colors.greenAccent,
-                width: 35,
-              ),
-            ],
-          ),
-          BarChartGroupData(
-            x: 3,
-            barRods: [
-              BarChartRodData(
-                toY: 5,
-                color: Colors.orange,
-                width: 35,
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: Offset(0, 4), // Shadow position
           ),
         ],
-        gridData: FlGridData(show: true),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: BarChart(
+          BarChartData(
+            titlesData: FlTitlesData(
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 40,
+                  getTitlesWidget: (value, meta) {
+                    final categories = [
+                      'Jan',
+                      'Feb',
+                      'Mar',
+                      'Apr'
+                    ]; // Update with actual categories
+                    final index = value.toInt();
+                    if (index >= 0 && index < categories.length) {
+                      return SideTitleWidget(
+                        axisSide: meta.axisSide,
+                        child: Text(
+                          categories[index],
+                          style: const TextStyle(
+                              color: Colors.black, fontSize: 12),
+                        ),
+                      );
+                    } else {
+                      return SideTitleWidget(
+                        axisSide: meta.axisSide,
+                        child: const Text(''),
+                      );
+                    }
+                  },
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 50,
+                  getTitlesWidget: (value, meta) {
+                    return SideTitleWidget(
+                      axisSide: meta.axisSide,
+                      child: Text(
+                        value.toInt() > 0 ? '${value.toInt()}' : '',
+                        style:
+                            const TextStyle(color: Colors.black, fontSize: 12),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              topTitles: AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+            ),
+            borderData: FlBorderData(
+              show: false,
+            ),
+            barGroups: [
+              BarChartGroupData(
+                x: 0,
+                barRods: [
+                  BarChartRodData(
+                    toY: 6000,
+                    color: Colors.red,
+                    width: 30,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ],
+              ),
+              BarChartGroupData(
+                x: 1,
+                barRods: [
+                  BarChartRodData(
+                    toY: 7000,
+                    color: Colors.greenAccent,
+                    width: 30,
+                    borderRadius: BorderRadius.circular(6), 
+                  ),
+                ],
+              ),
+              BarChartGroupData(
+                x: 2,
+                barRods: [
+                  BarChartRodData(
+                    toY: 5000,
+                    color: Colors.orange,
+                    width: 30,
+                    borderRadius: BorderRadius.circular(6), 
+                  ),
+                ],
+              ),
+            ],
+            gridData: FlGridData(show: false),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildMilkSalesChart() {
-    return LineChart(
-      LineChartData(
-        titlesData: FlTitlesData(show: true),
-        borderData: FlBorderData(show: true),
-        lineBarsData: [
-          LineChartBarData(
-            spots: const [
-              FlSpot(1, 3),
-              FlSpot(2, 5),
-              FlSpot(3, 4.5),
-              FlSpot(4, 6.5),
-            ],
-            isCurved: true,
-            barWidth: 5,
-            color: Colors.orange,
-            dotData: FlDotData(show: true),
-            belowBarData: BarAreaData(show: false),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: Offset(0, 4), // Shadow position
           ),
         ],
-        gridData: FlGridData(show: true),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: LineChart(
+          LineChartData(
+            titlesData: FlTitlesData(
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 40,
+                  getTitlesWidget: (value, meta) {
+                    final months = ['Jan', 'Feb', 'Mar', 'Apr'];
+                    final index = value.toInt();
+                    if (index >= 0 && index < months.length) {
+                      return SideTitleWidget(
+                        axisSide: meta.axisSide,
+                        child: Text(
+                          months[index],
+                          style: const TextStyle(
+                              color: Colors.black, fontSize: 12),
+                        ),
+                      );
+                    } else {
+                      return SideTitleWidget(
+                        axisSide: meta.axisSide,
+                        child: const Text(''),
+                      );
+                    }
+                  },
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 50,
+                  getTitlesWidget: (value, meta) {
+                    return SideTitleWidget(
+                      axisSide: meta.axisSide,
+                      child: Text(
+                        value.toInt() > 0 ? '${value.toInt()}' : '',
+                        style:
+                            const TextStyle(color: Colors.black, fontSize: 12),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              topTitles: AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+            ),
+            borderData: FlBorderData(
+              show: false,
+            ),
+            lineBarsData: [
+              LineChartBarData(
+                spots: const [
+                  FlSpot(0, 2000),
+                  FlSpot(1, 3500),
+                  FlSpot(2, 3000),
+                  FlSpot(3, 4500),
+                ],
+                isCurved: true,
+                barWidth: 5,
+                color: Colors.orange,
+                dotData: FlDotData(show: true),
+                belowBarData: BarAreaData(show: false),
+              ),
+            ],
+            gridData: FlGridData(show: false),
+            lineTouchData: LineTouchData(
+              touchTooltipData: LineTouchTooltipData(),
+              touchSpotThreshold: 8,
+            ),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildProfitLossChart() {
-    return BarChart(
-      BarChartData(
-        titlesData: FlTitlesData(show: true),
-        borderData: FlBorderData(show: true),
-        barGroups: [
-          BarChartGroupData(
-            x: 1,
-            barRods: [
-              BarChartRodData(
-                toY: 6,
-                color: Colors.green,
-                width: 15,
-              ),
-            ],
-          ),
-          BarChartGroupData(
-            x: 2,
-            barRods: [
-              BarChartRodData(
-                toY: -3,
-                color: Colors.red,
-                width: 15,
-              ),
-            ],
-          ),
-          BarChartGroupData(
-            x: 3,
-            barRods: [
-              BarChartRodData(
-                toY: 5,
-                color: Colors.green,
-                width: 15,
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: Offset(0, 4), // Shadow position
           ),
         ],
-        gridData: FlGridData(show: true),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: BarChart(
+          BarChartData(
+            titlesData: FlTitlesData(
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 40,
+                  getTitlesWidget: (value, meta) {
+                    final periods = [
+                      'Week 1',
+                      'Week 2',
+                      'Week 3'
+                    ]; // Update with actual periods
+                    final index = value.toInt();
+                    if (index < periods.length) {
+                      return SideTitleWidget(
+                        axisSide: meta.axisSide,
+                        child: Text(
+                          periods[index],
+                          style: const TextStyle(
+                              color: Colors.black, fontSize: 12),
+                        ),
+                      );
+                    } else {
+                      return SideTitleWidget(
+                        axisSide: meta.axisSide,
+                        child: const Text(''),
+                      );
+                    }
+                  },
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 50,
+                  getTitlesWidget: (value, meta) {
+                    return SideTitleWidget(
+                      axisSide: meta.axisSide,
+                      child: Text(
+                        value.toInt() != 0 ? '${value.toInt()}' : '',
+                        style:
+                            const TextStyle(color: Colors.black, fontSize: 12),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              topTitles: AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+            ),
+            borderData: FlBorderData(
+              show: false,
+            ),
+            barGroups: [
+              BarChartGroupData(
+                x: 0,
+                barRods: [
+                  BarChartRodData(
+                    toY: 6000,
+                    color: Colors.green,
+                    width: 30,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ],
+              ),
+              BarChartGroupData(
+                x: 1,
+                barRods: [
+                  BarChartRodData(
+                    toY: -3000,
+                    color: Colors.red,
+                    width: 30,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ],
+              ),
+              BarChartGroupData(
+                x: 2,
+                barRods: [
+                  BarChartRodData(
+                    toY: 5000,
+                    color: Colors.green,
+                    width: 30,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ],
+              ),
+            ],
+            gridData: FlGridData(show: false),
+          ),
+        ),
       ),
     );
   }
@@ -250,25 +518,74 @@ class ReportsPage extends StatelessWidget {
   Widget _buildInventoryCostChart() {
     return LineChart(
       LineChartData(
-        titlesData: FlTitlesData(show: true),
-        borderData: FlBorderData(show: true),
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                final quarters = [
+                  'Q1',
+                  'Q2',
+                  'Q3',
+                  'Q4'
+                ]; // Update with actual quarters
+                if (value.toInt() < quarters.length) {
+                  return SideTitleWidget(
+                    axisSide: meta.axisSide,
+                    child: Text(
+                      quarters[value.toInt()],
+                      style: const TextStyle(color: Colors.black, fontSize: 12),
+                    ),
+                  );
+                } else {
+                  return SideTitleWidget(
+                    axisSide: meta.axisSide,
+                    child: const Text(''),
+                  );
+                }
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 50,
+              getTitlesWidget: (value, meta) {
+                return SideTitleWidget(
+                  axisSide: meta.axisSide,
+                  child: Text(
+                    value.toInt() > 0 ? '${value.toInt()}' : '',
+                    style: const TextStyle(color: Colors.black, fontSize: 12),
+                  ),
+                );
+              },
+            ),
+          ),
+          topTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+        borderData: FlBorderData(show: false),
         lineBarsData: [
           LineChartBarData(
             spots: const [
-              FlSpot(1, 2),
-              FlSpot(2, 3.5),
-              FlSpot(3, 4),
-              FlSpot(4, 5),
+              FlSpot(0, 2000),
+              FlSpot(1, 3500),
+              FlSpot(2, 4000),
+              FlSpot(3, 5000),
             ],
-            isCurved: true,
-            barWidth: 6,
+            isCurved: false,
+            barWidth: 5,
             color: Colors.purple,
             dotData: FlDotData(show: true),
             belowBarData: BarAreaData(show: false),
           ),
         ],
-        gridData: FlGridData(show: true),
-        // Removed lineTouchData parameter
+        gridData: FlGridData(show: false),
       ),
     );
   }

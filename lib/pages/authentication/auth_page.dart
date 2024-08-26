@@ -38,45 +38,98 @@ class AuthPage extends StatelessWidget {
     );
   }
 
-  // Sample data methods. Replace these with actual data fetching if needed
-  List<BarChartGroupData> _createBarChartData() {
-    return [
-      BarChartGroupData(
-        x: 0,
-        barRods: [
-          BarChartRodData(toY: 5000, color: Colors.blue),
-        ],
-      ),
-      BarChartGroupData(
-        x: 1,
-        barRods: [
-          BarChartRodData(toY: 2500, color: Colors.blue),
-        ],
-      ),
-      BarChartGroupData(
-        x: 2,
-        barRods: [
-          BarChartRodData(toY: 10000, color: Colors.blue),
-        ],
-      ),
-      BarChartGroupData(
-        x: 3,
-        barRods: [
-          BarChartRodData(toY: 7500, color: Colors.blue),
-        ],
-      ),
-    ];
+// Function to determine color based on value
+Color _determineBarColor(double value) {
+  if (value > 8000) {
+    return Colors.green; // High
+  } else if (value > 4000) {
+    return Colors.orange; // Medium
+  } else {
+    return Colors.red; // Low
   }
+}
 
+// Function to create bar chart data with static colors
+List<BarChartGroupData> _createBarChartData() {
+  return [
+    BarChartGroupData(
+      x: 0,
+      barRods: [
+        BarChartRodData(
+          toY: 5000,
+          color: _determineBarColor(5000), // Apply static color
+          width: 20, // Adjust the width to make bars thicker
+        ),
+      ],
+    ),
+    BarChartGroupData(
+      x: 1,
+      barRods: [
+        BarChartRodData(
+          toY: 2500,
+          color: _determineBarColor(2500), // Apply static color
+          width: 20, // Adjust the width to make bars thicker
+        ),
+      ],
+    ),
+    BarChartGroupData(
+      x: 2,
+      barRods: [
+        BarChartRodData(
+          toY: 10000,
+          color: _determineBarColor(10000), // Apply static color
+          width: 20, // Adjust the width to make bars thicker
+        ),
+      ],
+    ),
+    BarChartGroupData(
+      x: 3,
+      barRods: [
+        BarChartRodData(
+          toY: 7500,
+          color: _determineBarColor(7500), // Apply static color
+          width: 20, // Adjust the width to make bars thicker
+        ),
+      ],
+    ),
+  ];
+}
+
+  // Function to create pie chart data
   List<PieChartSectionData> _createPieChartData() {
     return [
-      PieChartSectionData(value: 30, color: Colors.blue, title: '30%'),
-      PieChartSectionData(value: 20, color: Colors.red, title: '20%'),
-      PieChartSectionData(value: 25, color: Colors.green, title: '25%'),
-      PieChartSectionData(value: 25, color: Colors.orange, title: '25%'),
+      PieChartSectionData(
+        value: 30,
+        color: Colors.blue,
+        title: '30%',
+        radius: 50,
+        titleStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+      ),
+      PieChartSectionData(
+        value: 20,
+        color: Colors.red,
+        title: '20%',
+        radius: 50,
+        titleStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+      ),
+      PieChartSectionData(
+        value: 25,
+        color: Colors.green,
+        title: '25%',
+        radius: 50,
+        titleStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+      ),
+      PieChartSectionData(
+        value: 25,
+        color: Colors.orange,
+        title: '25%',
+        radius: 50,
+        titleStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+      ),
     ];
   }
 
+  // Function to create line chart data
   List<LineChartBarData> _createLineChartData() {
     return [
       LineChartBarData(
@@ -89,7 +142,10 @@ class AuthPage extends StatelessWidget {
         isCurved: true,
         color: Colors.blue,
         dotData: const FlDotData(show: true),
-        belowBarData: BarAreaData(show: true),
+        belowBarData: BarAreaData(
+          show: true,
+          color: Colors.blue.withOpacity(0.3), // Gradient effect below the line
+        ),
       ),
     ];
   }

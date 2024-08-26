@@ -9,7 +9,7 @@ class CattleList extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cattle List'),
+        title: const Text('My Cattle'),
         centerTitle: true,
         backgroundColor: Colors.blueAccent,
         leading: IconButton(

@@ -39,7 +39,7 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  void signUserUp() async {
+  Future<void> signUserUp() async {
     setState(() {
       isLoading = true;
     });
@@ -63,31 +63,41 @@ class _RegisterPageState extends State<RegisterPage> {
 
         final user = userCredential.user;
 
-        // Navigate to the Dashboard page
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => HomePage(
-              barChartData: [],
-              pieChartData: [],
-              lineChartData: [],
-              animate: true,
-              firestoreServices: FirestoreServices(userId),
-              user: user,
-              userId: userId,
+        // Navigate to the Dashboard page if the widget is still mounted
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => HomePage(
+                barChartData: [],
+                pieChartData: [],
+                lineChartData: [],
+                animate: true,
+                firestoreServices: FirestoreServices(userId),
+                user: user,
+                userId: userId,
+              ),
             ),
-          ),
-        );
+          );
+        }
       } else {
-        showErrorMessage("Passwords don't match❌");
+        if (mounted) {
+          showErrorMessage("Passwords don't match❌");
+        }
       }
     } on FirebaseAuthException catch (e) {
-      showErrorMessage(e.message ?? 'An error occurred');
+      if (mounted) {
+        showErrorMessage(e.message ?? 'An error occurred');
+      }
     } on FirebaseException catch (e) {
-      showErrorMessage('Firestore error: ${e.message}');
+      if (mounted) {
+        showErrorMessage('Firestore error: ${e.message}');
+      }
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
