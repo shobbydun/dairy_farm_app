@@ -1,16 +1,54 @@
-# dairy_harbor
+# Dairy Harbor 
+Diary farm app is a comprehensive dairy farm management application designed to streamline farm operations, manage cattle, track milk production, handle inventory, and oversee procedures. 
+This app offers a wide range of functionalities aimed at improving efficiency and data management in dairy farming.
 
-A new Flutter project.
+# Features
 
-## Getting Started
+## Authentication:
+Login/Registration: Users can create an account or log in with email and password.
+Google Sign-In: Support for Google authentication.
+Apple Sign-In: Support for Apple authentication.
+Dashboard:
 
-This project is a starting point for a Flutter application.
+## Home Page:
+Overview of farm operations with visual charts (bar, pie, line charts).
+## User Profile: 
+Manage user information and view profile details.
 
-A few resources to get you started if this is your first Flutter project:
+## Cattle Management:
+Cattle List: View and manage the list of cattle.
+Cattle Profile: Detailed profile for individual cattle.
+Cattle Form: Form to add or edit cattle information.
+Milk Management:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Daily Production: 
+Track daily milk production data.
+Milk Distribution & Sales: Manage milk distribution and sales records.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Procedures:
+Artificial Insemination: Record and track artificial insemination procedures.
+Calving: Manage calving events.
+Dehorning: Track dehorning procedures.
+Deworming: Record deworming treatments.
+Heat Detection: Monitor heat detection procedures.
+Miscarriage: Manage and record miscarriage events.
+Natural Insemination: Record natural insemination procedures.
+Pest Control: Manage pest control activities.
+Pregnancy: Track pregnancy status of cattle.
+Treatment: Record treatments administered to cattle.
+Vaccination: Track vaccinations given to cattle.
+Inventory Management:
+
+## Administrative Wages:
+Manage administrative wages.
+Farm Machinery: Track and manage farm machinery.
+Feeds: Manage feed inventory.
+Medicine: Track medicine inventory.
+Notifications: View and manage notifications related to inventory.
+
+## Reports:
+Reports Page: Generate and view various reports related to farm operations and cattle management.
+
+## Workers Management:
+Worker List: View and manage the list of farm workers.
+Worker Profile: Detailed profile for individual workers.
