@@ -108,15 +108,15 @@ class _SidebarMenuState extends State<SidebarMenu> {
                       ),
                     ],
                   ),
-                  _buildExpandableMenuItem(
-                    icon: Icons.medical_services,
-                    text: 'Treatment',
-                    isExpanded: false,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/treatment');
-                    },
-                  ),
+                  // _buildExpandableMenuItem(
+                  //   icon: Icons.medical_services,
+                  //   text: 'Treatment',
+                  //   isExpanded: false,
+                  //   onTap: () {
+                  //     Navigator.pop(context);
+                  //     Navigator.pushNamed(context, '/treatment');
+                  //   },
+                  // ),
                   _buildExpandableMenuItem(
                     icon: Icons.bar_chart,
                     text: 'Reports',

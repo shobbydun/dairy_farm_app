@@ -209,8 +209,3 @@ class _NaturalInseminationPageState extends State<NaturalInseminationPage> {
   }
 }
 
-void main() {
-  runApp(MaterialApp(
-    home: NaturalInseminationPage(),
-  ));
-}

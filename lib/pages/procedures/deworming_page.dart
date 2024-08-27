@@ -69,20 +69,30 @@ class _DewormingPageState extends State<DewormingPage> {
         title: Text('Deworming'),
         backgroundColor: Colors.lightBlueAccent,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildHeaderCard(),
-            const SizedBox(height: 16.0),
-            _buildDewormingForm(),
-            const SizedBox(height: 16.0),
-            Expanded(
-              child: _buildDewormingList(),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            flex: 1,
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    _buildHeaderCard(),
+                    const SizedBox(height: 16.0),
+                    _buildDewormingForm(),
+                    const SizedBox(height: 16.0),
+                  ],
+                ),
+              ),
             ),
-          ],
-        ),
+          ),
+          // Expanded(
+          //   flex: 2,
+          //   child: _buildDewormingList(),
+          // ),
+        ],
       ),
     );
   }
@@ -102,7 +112,7 @@ class _DewormingPageState extends State<DewormingPage> {
             child: Image.asset(
               'assets/deworm.jpeg',
               fit: BoxFit.cover,
-              height: 200,
+              height: 300,
               width: double.infinity,
             ),
           ),
@@ -255,12 +265,7 @@ class _DewormingPageState extends State<DewormingPage> {
   }
 
   Widget _buildDewormingList() {
-    if (_dewormingList.isEmpty) {
-      return Center(
-        child: Text('No deworming records available'),
-      );
-    }
-
+    
     return ListView.builder(
       itemCount: _dewormingList.length,
       itemBuilder: (context, index) {
@@ -293,8 +298,4 @@ class _DewormingPageState extends State<DewormingPage> {
   }
 }
 
-void main() {
-  runApp(MaterialApp(
-    home: DewormingPage(),
-  ));
-}
+

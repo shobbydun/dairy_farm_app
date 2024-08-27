@@ -269,8 +269,3 @@ class _PregnancyPageState extends State<PregnancyPage> {
   }
 }
 
-// void main() {
-//   runApp(MaterialApp(
-//     home: PregnancyPage(),
-//   ));
-// }

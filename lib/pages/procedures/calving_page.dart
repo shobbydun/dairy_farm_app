@@ -1,3 +1,4 @@
+import 'package:dairy_harbor/pages/inventory/notification_page.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -22,7 +23,7 @@ class _CalvingPageState extends State<CalvingPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Calving Management'),
-        backgroundColor: Colors.lightGreen,
+        backgroundColor: Colors.blueAccent,
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -33,7 +34,10 @@ class _CalvingPageState extends State<CalvingPage> {
           IconButton(
             icon: const Icon(Icons.notifications),
             onPressed: () {
-              // Navigate to Notifications Page
+              Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => NotificationScreen()),
+                  );
             },
           ),
         ],
@@ -62,7 +66,7 @@ class _CalvingPageState extends State<CalvingPage> {
     int recentCalvings = _calves.where((calf) => DateTime.now().difference(calf.birthDate).inDays <= 30).length;
 
     return Card(
-      color: Colors.lightGreen[50],
+      color: Colors.greenAccent[50],
       elevation: 4.0,
       margin: const EdgeInsets.all(8.0),
       child: Padding(
@@ -75,7 +79,7 @@ class _CalvingPageState extends State<CalvingPage> {
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Colors.lightGreen,
+                color: Colors.blueAccent,
               ),
             ),
             const SizedBox(height: 16.0),
@@ -105,7 +109,7 @@ class _CalvingPageState extends State<CalvingPage> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              Icon(Icons.pets, size: 40, color: Colors.lightGreen),
+              Icon(Icons.pets, size: 40, color: Colors.blueAccent),
               const SizedBox(height: 8.0),
               Text(
                 title,
@@ -146,7 +150,7 @@ class _CalvingPageState extends State<CalvingPage> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.lightGreen,
+                color: Colors.blueAccent,
               ),
             ),
             const SizedBox(height: 16.0),
@@ -162,7 +166,7 @@ class _CalvingPageState extends State<CalvingPage> {
       contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
       title: Text(calf.name, style: const TextStyle(fontWeight: FontWeight.bold)),
       subtitle: Text('Birth Date: ${DateFormat.yMMMd().format(calf.birthDate)}\nMother: ${calf.mother}'),
-      leading: Icon(Icons.pets, color: Colors.lightGreen),
+      leading: Icon(Icons.pets, color: Colors.blueAccent),
       trailing: Icon(Icons.edit, color: Colors.grey),
       onTap: () {
         // Handle calf detail view or edit
@@ -188,7 +192,7 @@ class _CalvingPageState extends State<CalvingPage> {
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.lightGreen,
+                color: Colors.blueAccent,
               ),
             ),
             const SizedBox(height: 16.0),
@@ -217,7 +221,7 @@ class _CalvingPageState extends State<CalvingPage> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.lightGreen,
+                color: Colors.blueAccent,
               ),
             ),
             const SizedBox(height: 16.0),
