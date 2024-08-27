@@ -1,3 +1,4 @@
+import 'package:dairy_harbor/firebase_options.dart';
 import 'package:dairy_harbor/pages/authentication/auth_page.dart';
 import 'package:dairy_harbor/pages/authentication/login_or_register_page.dart';
 import 'package:dairy_harbor/pages/authentication/login_page.dart';
@@ -32,10 +33,9 @@ import 'package:dairy_harbor/pages/workers/worker_list_page.dart';
 import 'package:dairy_harbor/pages/workers/worker_profile_page.dart';
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:dairy_harbor/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -103,7 +103,7 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (context) => UserProfile());
           case '/dailyProduction':
             return MaterialPageRoute(
-                builder: (context) => DailyProductionPage());
+                builder: (context) => MilkProductionPage());
           case '/milkDistribution':
             return MaterialPageRoute(
                 builder: (context) => MilkDistributionSales());

@@ -36,6 +36,7 @@ dependencies:
   fl_chart: ^0.68.0
   flutter:
     sdk: flutter
+  flutter_date_pickers: ^0.4.3
   flutter_datetime_picker: ^1.5.1
   google_sign_in: ^6.2.1
   image_picker: ^1.1.2
