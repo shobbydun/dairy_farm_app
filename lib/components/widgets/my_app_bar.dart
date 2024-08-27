@@ -78,7 +78,7 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                     },
                   );
 
-                  if (confirmLogout == true) {
+                  if (confirmLogout == true && Navigator.canPop(context)) {
                     try {
                       await _authService.logout();
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -87,7 +87,7 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                         ),
                       );
                       // Optionally, navigate to the login screen or clear app state
-                      // Navigator.of(context).pushReplacementNamed('/login');
+                      Navigator.of(context).pushReplacementNamed('/login');
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(

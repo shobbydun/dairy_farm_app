@@ -29,110 +29,120 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  Future<void> signUserIn() async {
-    if (!mounted) return;
+Future<void> signUserIn() async {
+  if (!mounted) return;
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return const Center(
-          child: CircularProgressIndicator(
-            color: Colors.green,
-          ),
-        );
-      },
+  showDialog(
+    context: context,
+    builder: (context) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: Colors.green,
+        ),
+      );
+    },
+  );
+
+  try {
+    UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: emailController.text,
+      password: passwordController.text,
     );
 
-    try {
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text,
-        password: passwordController.text,
+    final user = userCredential.user;
+
+    if (user != null && mounted) {
+      Navigator.pop(context); // Close the loading dialog
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AuthPage(), // Use AuthPage for handling navigation based on auth state
+        ),
       );
-
-      final user = userCredential.user;
-
-      if (user != null) {
-        Navigator.pop(context); // Close the loading dialog
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AuthPage(), // Use AuthPage for handling navigation based on auth state
-          ),
-        );
-      }
-    } on FirebaseAuthException catch (e) {
+    }
+  } on FirebaseAuthException catch (e) {
+    if (mounted) {
       Navigator.pop(context); // Close the loading dialog
       showErrorMessage(e.message ?? "An error occurred");
     }
   }
+}
 
-  void forgotPassword() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.grey[300],
-          title: const Text("Reset Password"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                  "Enter your email address and we'll send you a link to reset your password."),
-              const SizedBox(height: 10),
-              TextField(
-                controller: emailController,
-                decoration: const InputDecoration(
-                  hintText: "Enter email",
-                ),
-                keyboardType: TextInputType.emailAddress,
+void forgotPassword() {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        backgroundColor: Colors.grey[300],
+        title: const Text("Reset Password"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+                "Enter your email address and we'll send you a link to reset your password."),
+            const SizedBox(height: 10),
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(
+                hintText: "Enter email",
               ),
-              const SizedBox(height: 10),
-              if (_errorMessage.isNotEmpty)
-                Text(
-                  _errorMessage,
-                  style: const TextStyle(color: Colors.red),
-                ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: const Text("Cancel"),
+              keyboardType: TextInputType.emailAddress,
             ),
-            TextButton(
-              onPressed: () async {
-                final email = emailController.text;
-                if (email.isEmpty) {
+            const SizedBox(height: 10),
+            if (_errorMessage.isNotEmpty)
+              Text(
+                _errorMessage,
+                style: const TextStyle(color: Colors.red),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close the dialog
+            },
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () async {
+              final email = emailController.text;
+              if (email.isEmpty) {
+                if (mounted) {
                   setState(() {
                     _errorMessage = "Email cannot be empty.";
                     emailController.clear();
                   });
-                } else if (!_isValidEmail(email)) {
+                }
+              } else if (!_isValidEmail(email)) {
+                if (mounted) {
                   setState(() {
                     _errorMessage = "Invalid email address.";
                     emailController.clear();
                   });
-                } else {
-                  try {
-                    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                }
+              } else {
+                try {
+                  await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                  if (mounted) {
                     Navigator.of(context).pop(); // Close the dialog
                     showSuccessMessage("Password reset email sent!");
-                  } on FirebaseAuthException catch (e) {
+                  }
+                } on FirebaseAuthException catch (e) {
+                  if (mounted) {
                     setState(() {
                       _errorMessage = e.message ?? "An error occurred";
                     });
                   }
                 }
-              },
-              child: const Text("Send"),
-            ),
-          ],
-        );
-      },
-    );
-  }
+              }
+            },
+            child: const Text("Send"),
+          ),
+        ],
+      );
+    },
+  );
+}
 
   // Helper method to check email validity
   bool _isValidEmail(String email) {
