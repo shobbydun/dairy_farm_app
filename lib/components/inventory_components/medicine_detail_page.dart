@@ -7,14 +7,15 @@ class MedicineDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Fetch medicine details using medicineId
-    // For demo purposes, we'll use placeholder data
+    // medicine details using medicineId
+   
     final String name = 'Sample Medicine';
     final String quantity = '10 tablets';
     final String expiryDate = '2025-12-01';
     final String supplier = 'Sample Supplier';
 
     return Scaffold(
+
       appBar: AppBar(
         title: Text('Medicine Details'),
         backgroundColor: Colors.blueAccent,

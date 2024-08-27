@@ -101,7 +101,7 @@ class UserProfile extends StatelessWidget {
     );
   }
 
-  // Widget to build a section with a title and content
+  
   Widget _buildSection({
     required String title,
     required List<String> content,
@@ -111,7 +111,7 @@ class UserProfile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16.0),
         margin:
-            const EdgeInsets.only(bottom: 20), // Adds spacing between sections
+            const EdgeInsets.only(bottom: 20),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
@@ -174,7 +174,6 @@ class EditProfilePage extends StatelessWidget {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                // Add functionality to change profile picture
               },
               child: Text('Change Profile Picture'),
             ),
@@ -197,7 +196,6 @@ class EditProfilePage extends StatelessWidget {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                // Add functionality to save changes
               },
               child: Text('Save Changes'),
             ),

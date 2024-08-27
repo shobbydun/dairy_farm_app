@@ -2,7 +2,6 @@ import 'package:dairy_harbor/components/inventory_components/add_medicine_page.d
 import 'package:dairy_harbor/components/inventory_components/edit_medicine_page.dart';
 import 'package:dairy_harbor/components/inventory_components/medicine_detail_page.dart';
 import 'package:flutter/material.dart';
- // Add the import
 
 class MedicinePage extends StatelessWidget {
   const MedicinePage({super.key});
@@ -25,7 +24,7 @@ class MedicinePage extends StatelessWidget {
           IconButton(
             icon: Icon(Icons.refresh),
             onPressed: () {
-              // Handle refresh action
+            
             },
           ),
           IconButton(
@@ -84,7 +83,7 @@ class MedicinePage extends StatelessWidget {
                       DropdownMenuItem(value: 'Quantity', child: Text('Quantity')),
                     ],
                     onChanged: (value) {
-                      // Handle filter change
+                     
                     },
                   ),
                 ],
@@ -110,7 +109,7 @@ class MedicinePage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Total Medicines: 5', // Update count
+                    'Total Medicines: 5', 
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -118,7 +117,7 @@ class MedicinePage extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Expiring Soon: 2', // Example value
+                    'Expiring Soon: 2', 
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -130,7 +129,7 @@ class MedicinePage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Medicine List Table
+            
             Expanded(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -196,7 +195,7 @@ class MedicinePage extends StatelessWidget {
                               );
 
                               if (confirm ?? false) {
-                                // Handle delete action
+                             
                               }
                             },
                           ),
@@ -256,7 +255,7 @@ class MedicinePage extends StatelessWidget {
                               );
 
                               if (confirm ?? false) {
-                                // Handle delete action
+                          
                               }
                             },
                           ),
@@ -316,7 +315,7 @@ class MedicinePage extends StatelessWidget {
                               );
 
                               if (confirm ?? false) {
-                                // Handle delete action
+                               
                               }
                             },
                           ),
@@ -376,7 +375,7 @@ class MedicinePage extends StatelessWidget {
                               );
 
                               if (confirm ?? false) {
-                                // Handle delete action
+                               
                               }
                             },
                           ),
@@ -436,7 +435,7 @@ class MedicinePage extends StatelessWidget {
                               );
 
                               if (confirm ?? false) {
-                                // Handle delete action
+                                
                               }
                             },
                           ),

@@ -35,10 +35,10 @@ class AuthService {
   Future<UserCredential?> signInWithApple() async {
     try {
       final credential = await SignInWithApple.getAppleIDCredential(
-        // On Android, this will redirect to a web-based sign-in flow
+        //  Android redirect to a web-based sign-in flow
         webAuthenticationOptions: WebAuthenticationOptions(
-          clientId: 'com.example.app', // Your app's client ID
-          redirectUri: Uri.parse('https://example.com/callbacks/sign_in_with_apple'), // Your app's redirect URI
+          clientId: 'com.example.dairy_harbor', 
+          redirectUri: Uri.parse('https://example.com/callbacks/sign_in_with_apple'),
         ),
         scopes: [
           AppleIDAuthorizationScopes.email,

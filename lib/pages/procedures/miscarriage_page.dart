@@ -111,7 +111,7 @@ class _MiscarriagePageState extends State<MiscarriagePage> {
                   lastDate: DateTime(2101),
                 );
                 if (pickedDate != null) {
-                  // Format the date and update the TextFormField
+                 
                   String formattedDate = '${pickedDate.year.toString().padLeft(4, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}';
                   setState(() {
                     _dateController.text = formattedDate;
@@ -177,7 +177,7 @@ class _MiscarriagePageState extends State<MiscarriagePage> {
                 IconButton(
                   icon: Icon(Icons.delete, color: Colors.red),
                   onPressed: () {
-                    // Handle record deletion
+                    
                   },
                 ),
               ),

@@ -1,17 +1,16 @@
-import 'dart:ui'; // Import this for BackdropFilter and ImageFilter
-
+import 'dart:ui';
 import 'package:dairy_harbor/components/my_button.dart';
 import 'package:dairy_harbor/components/my_textfield.dart';
 import 'package:dairy_harbor/components/square_tile.dart';
-import 'package:dairy_harbor/pages/authentication/auth_page.dart'; // Import AuthPage
+import 'package:dairy_harbor/pages/authentication/auth_page.dart'; 
 import 'package:dairy_harbor/services_functions/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class LoginPage extends StatefulWidget {
-  final VoidCallback? onTap; // Updated to VoidCallback for better type safety
+  final VoidCallback? onTap; 
 
-  LoginPage({super.key, this.onTap}); // Optional parameter
+  LoginPage({super.key, this.onTap}); 
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -52,17 +51,17 @@ Future<void> signUserIn() async {
     final user = userCredential.user;
 
     if (user != null && mounted) {
-      Navigator.pop(context); // Close the loading dialog
+      Navigator.pop(context); 
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => AuthPage(), // Use AuthPage for handling navigation based on auth state
+          builder: (context) => AuthPage(),
         ),
       );
     }
   } on FirebaseAuthException catch (e) {
     if (mounted) {
-      Navigator.pop(context); // Close the loading dialog
+      Navigator.pop(context); 
       showErrorMessage(e.message ?? "An error occurred");
     }
   }
@@ -99,7 +98,7 @@ void forgotPassword() {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop(); // Close the dialog
+              Navigator.of(context).pop(); 
             },
             child: const Text("Cancel"),
           ),
@@ -124,7 +123,7 @@ void forgotPassword() {
                 try {
                   await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
                   if (mounted) {
-                    Navigator.of(context).pop(); // Close the dialog
+                    Navigator.of(context).pop(); 
                     showSuccessMessage("Password reset email sent!");
                   }
                 } on FirebaseAuthException catch (e) {
@@ -144,7 +143,7 @@ void forgotPassword() {
   );
 }
 
-  // Helper method to check email validity
+  
   bool _isValidEmail(String email) {
     final regex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
     return regex.hasMatch(email);
@@ -193,7 +192,7 @@ void forgotPassword() {
         children: [
           // Background image
           Image.asset(
-            'assets/back1.jpeg', // Replace with your image path
+            'assets/back1.jpeg', 
             fit: BoxFit.cover,
             width: double.infinity,
             height: double.infinity,

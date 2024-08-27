@@ -20,7 +20,7 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
         IconButton(
           icon: const Icon(Icons.search),
           onPressed: () {
-            // Handle search action
+            //  search action
           },
         ),
         PopupMenuButton(
@@ -51,7 +51,7 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                 leading: const Icon(Icons.logout),
                 title: const Text('Log Out'),
                 onTap: () async {
-                  Navigator.pop(context); // Close the popup menu
+                  Navigator.pop(context);
 
                   final bool? confirmLogout = await showDialog<bool>(
                     context: context,
@@ -59,17 +59,18 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                     builder: (BuildContext context) {
                       return AlertDialog(
                         title: const Text('Log Out'),
-                        content: const Text('Are you sure you want to log out?'),
+                        content:
+                            const Text('Are you sure you want to log out?'),
                         actions: <Widget>[
                           TextButton(
                             onPressed: () {
-                              Navigator.of(context).pop(false); // User pressed 'Cancel'
+                              Navigator.of(context).pop(false);
                             },
                             child: const Text('Cancel'),
                           ),
                           TextButton(
                             onPressed: () {
-                              Navigator.of(context).pop(true); // User pressed 'Log Out'
+                              Navigator.of(context).pop(true);
                             },
                             child: const Text('Log Out'),
                           ),
@@ -86,7 +87,7 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                           content: Text('Logged out successfully'),
                         ),
                       );
-                      // Optionally, navigate to the login screen or clear app state
+
                       Navigator.of(context).pushReplacementNamed('/login');
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(

@@ -14,6 +14,7 @@ class MachineryDetailsPage extends StatelessWidget {
     required this.dateAcquired,
   });
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

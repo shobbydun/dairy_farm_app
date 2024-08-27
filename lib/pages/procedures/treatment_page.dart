@@ -75,7 +75,7 @@ class _TreatmentPageState extends State<TreatmentPage> {
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  // Handle form submission
+                 
                 },
                 child: Text('Submit'),
               ),
@@ -130,7 +130,7 @@ class _TreatmentPageState extends State<TreatmentPage> {
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  // Handle save changes
+                 
                 },
                 child: Text('Save Changes'),
               ),
@@ -163,7 +163,7 @@ class _TreatmentPageState extends State<TreatmentPage> {
               ),
               SizedBox(height: 16.0),
 
-              // Add New Treatment Button
+          
               ElevatedButton(
                 onPressed: () => _showAddTreatmentModal(context),
                 child: Text('Add Treatment'),
@@ -175,7 +175,7 @@ class _TreatmentPageState extends State<TreatmentPage> {
               ),
               SizedBox(height: 16.0),
 
-              // Treatment List Section
+             
               _buildTreatmentListCard('Treatment List'),
             ],
           ),

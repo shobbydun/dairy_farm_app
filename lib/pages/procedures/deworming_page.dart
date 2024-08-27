@@ -88,10 +88,7 @@ class _DewormingPageState extends State<DewormingPage> {
               ),
             ),
           ),
-          // Expanded(
-          //   flex: 2,
-          //   child: _buildDewormingList(),
-          // ),
+      
         ],
       ),
     );

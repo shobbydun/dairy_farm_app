@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart'; // For date formatting
+import 'package:intl/intl.dart';
 
 class CattleForm extends StatefulWidget {
   const CattleForm({super.key});
@@ -26,7 +26,6 @@ class _CattleFormState extends State<CattleForm> {
       }
     } catch (e) {
       print('Error picking image: $e');
-      // Optionally, show a user-friendly message
     }
   }
 
@@ -100,7 +99,6 @@ class _CattleFormState extends State<CattleForm> {
                   Center(
                     child: ElevatedButton(
                       onPressed: () {
-                        // Add logic to save cattle record
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blueAccent,

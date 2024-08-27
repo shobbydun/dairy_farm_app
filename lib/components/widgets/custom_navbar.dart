@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
-// ignore: use_key_in_widget_constructors
 class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: Colors.lightBlueAccent, // bg-navbar-theme equivalent
+      backgroundColor: Colors.lightBlueAccent,
       elevation: 4.0,
       leading: IconButton(
         icon: const Icon(Icons.menu),
@@ -13,18 +12,15 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
           Scaffold.of(context).openDrawer();
         },
       ),
-      title: const Text('Dairy Harbor'), // Replace with dynamic value if needed
+      title: const Text('Dairy Harbor'),
       actions: [
         IconButton(
           icon: const Icon(Icons.search),
-          onPressed: () {
-            // Handle search action
-          },
+          onPressed: () {},
         ),
         PopupMenuButton(
           icon: const CircleAvatar(
-            backgroundImage:
-                AssetImage('assets/images/logo.png'), // Updated to local asset
+            backgroundImage: AssetImage('assets/images/logo.png'),
           ),
           itemBuilder: (context) => [
             PopupMenuItem(
@@ -32,7 +28,6 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                 leading: const Icon(Icons.person),
                 title: const Text('My Profile'),
                 onTap: () {
-                  // Handle profile action
                   _showMyProfileModal(context);
                 },
               ),
@@ -42,7 +37,6 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                 leading: const Icon(Icons.settings),
                 title: const Text('Edit Profile'),
                 onTap: () {
-                  // Handle edit profile action
                   _showEditProfileModal(context);
                 },
               ),
@@ -51,9 +45,7 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
               child: ListTile(
                 leading: const Icon(Icons.logout),
                 title: const Text('Log Out'),
-                onTap: () {
-                  // Handle logout action
-                },
+                onTap: () {},
               ),
             ),
           ],
@@ -81,7 +73,7 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(
-                  width: 100.0, // Add width constraint
+                  width: 100.0,
                   child: Image.asset(
                     'assets/images/logo.png',
                     fit: BoxFit.cover,
@@ -184,8 +176,7 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                 const SizedBox(height: 10),
                 ElevatedButton(
                   onPressed: () {
-                    // Handle the profile update logic
-                    Navigator.of(context).pop(); // Close the modal after saving
+                    Navigator.of(context).pop();
                   },
                   child: const Text('Update Profile'),
                 ),

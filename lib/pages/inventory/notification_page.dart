@@ -33,7 +33,7 @@ class NotificationList extends StatelessWidget {
         description: 'It\'s time for the quarterly maintenance of dairy equipment.',
         timestamp: '2024-08-14 03:30 PM',
       ),
-      // Add more notifications as needed
+     
     ];
 
     return notifications.isEmpty

@@ -36,84 +36,20 @@ class InventoryMainPage extends StatelessWidget {
           ),
         ],
       ),
-      // drawer: Drawer(
-      //   backgroundColor: Colors.blue,
-      //   child: ListView(
-      //     padding: EdgeInsets.zero,
-      //     children: [
-      //       DrawerHeader(
-      //         child: Text(
-      //           'Dairy \nFarm \nApp',
-      //           style: TextStyle(
-      //             color: Colors.black,
-      //             fontSize: 24,
-      //           ),
-      //         ),
-      //       ),
-      //       // Home and Inventory ExpansionTile
-      //       ExpansionTile(
-      //         leading: Icon(Icons.inventory, color: Colors.black),
-      //         title: Text('Inventory', style: TextStyle(color: Colors.white)),
-      //         children: <Widget>[
-      //           ListTile(
-      //             leading: Icon(Icons.grain, color: Colors.black),
-      //             title: Text('Feeds', style: TextStyle(color: Colors.white)),
-      //             onTap: () {
-      //               Navigator.push(
-      //                 context,
-      //                 MaterialPageRoute(builder: (context) => FeedsPage()),
-      //               );
-      //             },
-      //           ),
-      //           ListTile(
-      //             leading: Icon(Icons.local_pharmacy, color: Colors.black),
-      //             title: Text('Medicine', style: TextStyle(color: Colors.white)),
-      //             onTap: () {
-      //               Navigator.push(
-      //                 context,
-      //                 MaterialPageRoute(builder: (context) => MedicinePage()),
-      //               );
-      //             },
-      //           ),
-      //           ListTile(
-      //             leading: Icon(Icons.build, color: Colors.black),
-      //             title: Text('Farm Machinery', style: TextStyle(color: Colors.white)),
-      //             onTap: () {
-      //               Navigator.push(
-      //                 context,
-      //                 MaterialPageRoute(builder: (context) => FarmMachineryPage()),
-      //               );
-      //             },
-      //           ),
-      //         ],
-      //       ),
-      //       ListTile(
-      //         leading: Icon(Icons.admin_panel_settings, color: Colors.black),
-      //         title: Text('Administrative', style: TextStyle(color: Colors.white)),
-      //         onTap: () {
-      //           Navigator.push(
-      //             context,
-      //             MaterialPageRoute(builder: (context) => AdministrativeWages()),
-      //           );
-      //         },
-      //       ),
-      //       // Add more ListTiles if needed
-      //     ],
-      //   ),
-      // ),
+     
       body: Padding(
         padding: const EdgeInsets.all(8.0),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Overview Header
+              
               const SizedBox(height: 13),
               const Text(
                 'Inventory Overview:',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
-              // Cards for Detailed Statistics
+              
               Container(
                 height: 200,
                 child: SingleChildScrollView(
@@ -184,7 +120,7 @@ class InventoryMainPage extends StatelessWidget {
                             ),
                           ),
                           barGroups:
-                              showingGroups(), // Ensure this function is defined
+                              showingGroups(),
                         ),
                       ),
                     ),
@@ -193,7 +129,7 @@ class InventoryMainPage extends StatelessWidget {
               ),
               SizedBox(height: 16),
 
-              // Additional content or widgets can be added here
+             
             ],
           ),
         ),

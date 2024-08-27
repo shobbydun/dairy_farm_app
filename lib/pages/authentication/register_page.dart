@@ -1,4 +1,4 @@
-import 'dart:ui'; // Import this for BackdropFilter and ImageFilter
+import 'dart:ui'; 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dairy_harbor/components/my_button.dart';
 import 'package:dairy_harbor/components/my_textfield.dart';
@@ -31,7 +31,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   void dispose() {
-    // Dispose of the controllers when the widget is disposed
+
     businessNameController.dispose();
     emailController.dispose();
     passwordController.dispose();
@@ -46,13 +46,13 @@ class _RegisterPageState extends State<RegisterPage> {
 
     try {
       if (passwordController.text == confirmPasswordController.text) {
-        // Create user with Firebase Authentication
+     
         UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: emailController.text,
           password: passwordController.text,
         );
 
-        // Save user information to Firestore
+        
         String userId = userCredential.user?.uid ?? '';
         if (userId.isNotEmpty) {
           await FirebaseFirestore.instance.collection('users').doc(userId).set({
@@ -63,7 +63,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
         final user = userCredential.user;
 
-        // Navigate to the Dashboard page if the widget is still mounted
+     
         if (mounted) {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
@@ -125,14 +125,14 @@ class _RegisterPageState extends State<RegisterPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background image
+        
           Image.asset(
             'assets/back1.jpeg',
             fit: BoxFit.cover,
             width: double.infinity,
             height: double.infinity,
           ),
-          // Blur effect
+      
           BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
             child: Container(

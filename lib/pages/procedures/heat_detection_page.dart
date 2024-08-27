@@ -16,7 +16,7 @@ class HeatDetectionPage extends StatelessWidget {
             children: [
               _buildHeatDetectionCard(),
               SizedBox(height: 16.0),
-              _buildHeatDetectionList(), // Call to _buildHeatDetectionList
+              _buildHeatDetectionList(), 
             ],
           ),
         ),
@@ -24,7 +24,7 @@ class HeatDetectionPage extends StatelessWidget {
     );
   }
 
-  // Heat Detection Information Card
+
   Widget _buildHeatDetectionCard() {
     return Card(
       color: Colors.white,
@@ -79,12 +79,11 @@ class HeatDetectionPage extends StatelessWidget {
         _buildListTile('Cow #1234 - Detected in Heat', 'Last Detected: 2024-08-25'),
         _buildListTile('Cow #5678 - Detected in Heat', 'Last Detected: 2024-08-23'),
         _buildListTile('Cow #91011 - Not Detected', 'Last Checked: 2024-08-20'),
-        // Additional ListTiles can be added here as needed
       ],
     );
   }
 
-  // Helper method to create ListTile with consistent styling
+ 
   Widget _buildListTile(String title, String subtitle) {
     return Card(
       elevation: 4.0,

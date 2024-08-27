@@ -22,7 +22,7 @@ class CattleList extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
         child: ListView.builder(
-          itemCount: 10, // Replace with the actual number of cattle records
+          itemCount: 10, 
           itemBuilder: (context, index) {
             return Card(
               elevation: 8,
@@ -34,11 +34,11 @@ class CattleList extends StatelessWidget {
                 contentPadding: const EdgeInsets.all(15.0),
                 leading: CircleAvatar(
                   radius: 30,
-                  backgroundImage: const AssetImage('assets/profile.jpeg'), // Add a placeholder image
+                  backgroundImage: const AssetImage('assets/profile.jpeg'), 
                   backgroundColor: Colors.blue.shade100,
                 ),
                 title: Text(
-                  'Cattle $index', // Replace with cattle name or identifier
+                  'Cattle $index', 
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -46,7 +46,7 @@ class CattleList extends StatelessWidget {
                   ),
                 ),
                 subtitle: Text(
-                  'Breed: Holstein', // Replace with the breed or other relevant info
+                  'Breed: Holstein',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.blue.shade700,

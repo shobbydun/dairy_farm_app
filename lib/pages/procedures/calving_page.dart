@@ -10,7 +10,7 @@ class CalvingPage extends StatefulWidget {
 }
 
 class _CalvingPageState extends State<CalvingPage> {
-  final List<Calf> _calves = []; // List to hold calf records
+  final List<Calf> _calves = []; 
 
   void _addNewCalf(Calf newCalf) {
     setState(() {
@@ -28,7 +28,7 @@ class _CalvingPageState extends State<CalvingPage> {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              // Implement search functionality
+           
             },
           ),
           IconButton(
@@ -169,7 +169,7 @@ class _CalvingPageState extends State<CalvingPage> {
       leading: Icon(Icons.pets, color: Colors.blueAccent),
       trailing: Icon(Icons.edit, color: Colors.grey),
       onTap: () {
-        // Handle calf detail view or edit
+        
       },
     );
   }

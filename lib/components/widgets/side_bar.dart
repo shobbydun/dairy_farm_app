@@ -17,9 +17,9 @@ class _SidebarMenuState extends State<SidebarMenu> {
   bool isMilkExpanded = false;
   bool isProceduresExpanded = false;
   bool isWorkersExpanded = false;
-  bool isAuthExpanded = false; // Add this to manage auth section expansion
+  bool isAuthExpanded = false;
 
-  final AuthService _authService = AuthService(); // Initialize AuthService
+  final AuthService _authService = AuthService();
 
   @override
   Widget build(BuildContext context) {
@@ -38,11 +38,11 @@ class _SidebarMenuState extends State<SidebarMenu> {
               padding: EdgeInsets.all(16.0),
               child: CircleAvatar(
                 radius: 50,
-                backgroundImage: AssetImage('assets/download.png'), // Replace with your image path
+                backgroundImage: AssetImage('assets/download.png'),
               ),
             ),
             const Text(
-              'Munei Farm', // Replace with dynamic value
+              'Munei Farm',
               style: TextStyle(
                 fontFamily: 'Times New Roman',
                 fontWeight: FontWeight.bold,
@@ -89,34 +89,25 @@ class _SidebarMenuState extends State<SidebarMenu> {
                         text: 'Cattle Profile',
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.pushNamed(context, '/cattleProfile'); // Ensure you have a route for this
+                          Navigator.pushNamed(context, '/cattleProfile');
                         },
                       ),
                       _buildSubMenuItem(
                         text: 'Cattle List Page',
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.pushNamed(context, '/cattleListPage'); // Ensure you have a route for this
+                          Navigator.pushNamed(context, '/cattleListPage');
                         },
                       ),
                       _buildSubMenuItem(
                         text: 'Cattle Form',
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.pushNamed(context, '/cattleForm'); // Ensure you have a route for this
+                          Navigator.pushNamed(context, '/cattleForm');
                         },
                       ),
                     ],
                   ),
-                  // _buildExpandableMenuItem(
-                  //   icon: Icons.medical_services,
-                  //   text: 'Treatment',
-                  //   isExpanded: false,
-                  //   onTap: () {
-                  //     Navigator.pop(context);
-                  //     Navigator.pushNamed(context, '/treatment');
-                  //   },
-                  // ),
                   _buildExpandableMenuItem(
                     icon: Icons.bar_chart,
                     text: 'Reports',
@@ -227,7 +218,8 @@ class _SidebarMenuState extends State<SidebarMenu> {
                         text: 'Artificial Insemination',
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.pushNamed(context, '/artificialInsemination');
+                          Navigator.pushNamed(
+                              context, '/artificialInsemination');
                         },
                       ),
                       _buildSubMenuItem(
@@ -453,7 +445,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
   }
 
   void _showLogoutConfirmationDialog() {
-    if (!mounted) return; // Check if widget is still mounted
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -464,14 +456,14 @@ class _SidebarMenuState extends State<SidebarMenu> {
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
+                Navigator.of(context).pop();
               },
               child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () async {
-                Navigator.of(context).pop(); // Close the dialog
-                await _logout(); // Implement your logout logic
+                Navigator.of(context).pop();
+                await _logout();
               },
               child: const Text('Logout'),
             ),
@@ -482,16 +474,16 @@ class _SidebarMenuState extends State<SidebarMenu> {
   }
 
   Future<void> _logout() async {
-    if (!mounted) return; // Check if widget is still mounted
+    if (!mounted) return;
 
     try {
-      await _authService.logout(); // Call the logout function
+      await _authService.logout();
       if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(context, '/loginOrRegister', (route) => false);
+        Navigator.pushNamedAndRemoveUntil(
+            context, '/loginOrRegister', (route) => false);
       }
     } catch (e) {
       if (mounted) {
-        // Handle any errors that occur during logout
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Logout failed: $e')),
         );

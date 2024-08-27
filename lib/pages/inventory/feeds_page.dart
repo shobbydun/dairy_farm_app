@@ -1,7 +1,7 @@
 import 'package:dairy_harbor/pages/inventory/notification_page.dart';
 import 'package:dairy_harbor/pages/inventory/user_profile.dart';
 import 'package:flutter/material.dart';
- // Make sure to add this import
+ 
 
 class FeedsPage extends StatelessWidget {
   const FeedsPage({super.key});
@@ -23,7 +23,7 @@ class FeedsPage extends StatelessWidget {
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pop(context); // Navigate back
+            Navigator.pop(context); 
           },
         ),
         actions: [
@@ -68,31 +68,18 @@ class FeedsPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   image: DecorationImage(
                     image:
-                        AssetImage('assets/ttech.jpeg'), // Add your image asset
+                        AssetImage('assets/ttech.jpeg'),
                     fit: BoxFit.cover,
                   ),
                 ),
                 child: Align(
                   alignment: Alignment.center,
-                  // You can uncomment the text widget here if needed
-                  // child: Text(
-                  //   "Optimize your livestock's nutrition with"
-                  //   " comprehensive tracking of feed types,"
-                  //   " quantities, and schedules, ensuring a balanced diet"
-                  //   " for improved health and productivity",
-                  //   textAlign: TextAlign.center,
-                  //   style: TextStyle(
-                  //     color: Colors.white,
-                  //     fontSize: 20,
-                  //     fontWeight: FontWeight.bold,
-                  //   ),
-                  // ),
+              
                 ),
               ),
 
               SizedBox(height: 26),
 
-              // Feed List Table
               Text(
                 'Feed Details',
                 style: TextStyle(
@@ -106,8 +93,8 @@ class FeedsPage extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: Colors.lightBlueAccent, // Border color
-                    width: 2, // Border width
+                    color: Colors.lightBlueAccent,
+                    width: 2, 
                   ),
                 ),
                 child: SingleChildScrollView(
@@ -155,11 +142,11 @@ class FeedsPage extends StatelessWidget {
     );
   }
 
-  // Helper method to build the search bar
+  // Helper method search bar
   Widget _buildSearchBar() {
     return Container(
       width: double.infinity,
-      height: 50, // Increased height for a bigger search bar
+      height: 50, 
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(25),
@@ -167,14 +154,14 @@ class FeedsPage extends StatelessWidget {
           BoxShadow(
             color: Colors.lightBlueAccent.withOpacity(0.8),
             blurRadius: 8,
-            offset: Offset(0, 4), // changes position of shadow
+            offset: Offset(0, 4), 
           ),
         ],
       ),
       child: TextField(
         decoration: InputDecoration(
           border: InputBorder.none,
-          hintText: 'Search', // Updated hint text
+          hintText: 'Search', 
           prefixIcon: Icon(Icons.search, color: Colors.grey),
         ),
       ),

@@ -100,6 +100,7 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
 
                     // Process the data (e.g., add to inventory, save to database)
 
+
                     // Close the form and return to the previous screen
                     Navigator.pop(context);
                   }

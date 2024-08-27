@@ -15,7 +15,7 @@ class AuthPage extends StatelessWidget {
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            // While waiting for the auth state to be determined, show a loading spinner
+            // While waiting for the auth state to be determined, showing a loading spinner
             return Center(child: CircularProgressIndicator());
           }
 
@@ -57,8 +57,8 @@ List<BarChartGroupData> _createBarChartData() {
       barRods: [
         BarChartRodData(
           toY: 5000,
-          color: _determineBarColor(5000), // Apply static color
-          width: 20, // Adjust the width to make bars thicker
+          color: _determineBarColor(5000),
+          width: 20, 
         ),
       ],
     ),
@@ -67,8 +67,8 @@ List<BarChartGroupData> _createBarChartData() {
       barRods: [
         BarChartRodData(
           toY: 2500,
-          color: _determineBarColor(2500), // Apply static color
-          width: 20, // Adjust the width to make bars thicker
+          color: _determineBarColor(2500), 
+          width: 20, 
         ),
       ],
     ),
@@ -77,8 +77,8 @@ List<BarChartGroupData> _createBarChartData() {
       barRods: [
         BarChartRodData(
           toY: 10000,
-          color: _determineBarColor(10000), // Apply static color
-          width: 20, // Adjust the width to make bars thicker
+          color: _determineBarColor(10000), 
+          width: 20, 
         ),
       ],
     ),
@@ -87,8 +87,8 @@ List<BarChartGroupData> _createBarChartData() {
       barRods: [
         BarChartRodData(
           toY: 7500,
-          color: _determineBarColor(7500), // Apply static color
-          width: 20, // Adjust the width to make bars thicker
+          color: _determineBarColor(7500), 
+          width: 20, 
         ),
       ],
     ),

@@ -195,7 +195,7 @@ class _NaturalInseminationPageState extends State<NaturalInseminationPage> {
                     IconButton(
                       icon: Icon(Icons.delete, color: Colors.red),
                       onPressed: () {
-                        // Handle deletion
+                       
                       },
                     ),
                   ],

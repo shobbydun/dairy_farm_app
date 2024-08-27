@@ -12,6 +12,7 @@ class _AddWagePageState extends State<AddWagePage> {
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _wageController = TextEditingController();
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

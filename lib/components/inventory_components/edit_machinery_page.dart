@@ -12,6 +12,7 @@ class EditMachineryPage extends StatefulWidget {
     required this.machineryType,
     required this.machineryCondition,
     required this.dateAcquired,
+  
   });
 
   @override
@@ -104,11 +105,11 @@ class _EditMachineryPageState extends State<EditMachineryPage> {
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState?.validate() ?? false) {
-                    // Handle form submission
+                 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Machinery details updated')),
                     );
-                    Navigator.pop(context); // Go back to the previous screen
+                    Navigator.pop(context); 
                   }
                 },
                 style: ElevatedButton.styleFrom(

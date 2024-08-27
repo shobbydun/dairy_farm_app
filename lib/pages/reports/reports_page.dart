@@ -128,7 +128,7 @@ class ReportsPage extends StatelessWidget {
                   'Feb',
                   'Mar',
                   'Apr'
-                ]; // Update with actual months
+                ]; 
                 if (monthIndex < months.length) {
                   return SideTitleWidget(
                     axisSide: meta.axisSide,
@@ -217,7 +217,7 @@ class ReportsPage extends StatelessWidget {
                       'Feb',
                       'Mar',
                       'Apr'
-                    ]; // Update with actual categories
+                    ]; 
                     final index = value.toInt();
                     if (index >= 0 && index < categories.length) {
                       return SideTitleWidget(
@@ -314,7 +314,7 @@ class ReportsPage extends StatelessWidget {
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
             blurRadius: 8,
-            offset: Offset(0, 4), // Shadow position
+            offset: Offset(0, 4), 
           ),
         ],
       ),
@@ -427,7 +427,7 @@ class ReportsPage extends StatelessWidget {
                       'Week 1',
                       'Week 2',
                       'Week 3'
-                    ]; // Update with actual periods
+                    ];
                     final index = value.toInt();
                     if (index < periods.length) {
                       return SideTitleWidget(
@@ -529,7 +529,7 @@ class ReportsPage extends StatelessWidget {
                   'Q2',
                   'Q3',
                   'Q4'
-                ]; // Update with actual quarters
+                ];
                 if (value.toInt() < quarters.length) {
                   return SideTitleWidget(
                     axisSide: meta.axisSide,

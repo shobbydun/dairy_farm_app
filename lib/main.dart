@@ -50,7 +50,7 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // Assuming user might be retrieved elsewhere in your actual code
+ 
   User? get user => FirebaseAuth.instance.currentUser;
 
   @override
@@ -66,9 +66,9 @@ class MyApp extends StatelessWidget {
                 args['firestoreServices'] as FirestoreServices?;
             if (firestoreServices == null) {
               print("Error: FirestoreServices argument is missing or invalid.");
-              // Optionally navigate to an error page
+              
               return MaterialPageRoute(
-                  builder: (context) => AuthPage()); // Example fallback
+                  builder: (context) => AuthPage());
             }
             return MaterialPageRoute(
               builder: (context) => HomePage(

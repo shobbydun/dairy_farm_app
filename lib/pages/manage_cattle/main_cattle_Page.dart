@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:dairy_harbor/pages/manage_cattle/cattle_list_page.dart'; // Make sure this path is correct
-import 'cattle_form.dart'; // Ensure this path is correct
+import 'package:dairy_harbor/pages/manage_cattle/cattle_list_page.dart';
+import 'cattle_form.dart'; 
 
 class CattlePage extends StatefulWidget {
   const CattlePage({super.key});
@@ -41,11 +41,11 @@ class _CattlePageState extends State<CattlePage> {
             ),
             const SizedBox(height: 10),
             if (_showForm)
-              CattleForm(), // Display the cattle registration form if _showForm is true
+              CattleForm(), 
             const SizedBox(height: 20),
             SizedBox(
               height: 300,
-              child: CattleList(), // Ensure CattleList widget is properly defined and imported
+              child: CattleList(),
             ),
           ],
         ),

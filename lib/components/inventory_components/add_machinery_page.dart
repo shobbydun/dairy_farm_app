@@ -7,6 +7,7 @@ class AddMachineryPage extends StatefulWidget {
   _AddMachineryPageState createState() => _AddMachineryPageState();
 }
 
+
 class _AddMachineryPageState extends State<AddMachineryPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();

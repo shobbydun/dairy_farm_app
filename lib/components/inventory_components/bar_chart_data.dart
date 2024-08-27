@@ -11,6 +11,7 @@ List<BarChartGroupData> showingGroups() => List.generate(8, (i) {
         color: Colors.blue,
         width: 20,
         borderRadius: BorderRadius.circular(4),
+   
       ),
     ],
   );

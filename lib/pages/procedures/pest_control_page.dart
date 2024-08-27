@@ -13,13 +13,13 @@ class PestControlPage extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              // Implement search functionality
+              
             },
           ),
           IconButton(
             icon: const Icon(Icons.notifications),
             onPressed: () {
-              // Navigate to Notifications Page
+             
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => NotificationScreen()),
@@ -289,7 +289,7 @@ class PestControlPage extends StatelessWidget {
       leading: Icon(Icons.description, color: Colors.lightBlueAccent),
       trailing: Icon(Icons.more_vert, color: Colors.grey),
       onTap: () {
-        // Handle record tap
+        
       },
     );
   }
@@ -339,7 +339,7 @@ class PestControlPage extends StatelessWidget {
             const SizedBox(height: 16.0),
             ElevatedButton(
               onPressed: () {
-                // Handle Save
+              
               },
               child: Text('Save'),
             ),

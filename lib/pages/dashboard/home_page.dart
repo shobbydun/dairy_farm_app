@@ -4,7 +4,7 @@ import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Import for date formatting
+import 'package:intl/intl.dart'; 
 
 class HomePage extends StatefulWidget {
   final FirestoreServices firestoreServices;
@@ -20,7 +20,7 @@ class HomePage extends StatefulWidget {
     required this.pieChartData,
     required this.lineChartData,
     required this.animate,
-    this.user, // Make user optional
+    this.user, 
     required this.firestoreServices,
     required this.userId,
   });
@@ -60,9 +60,9 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomNavbar(), // Use CustomNavbar here
+      appBar: CustomNavbar(), 
       drawer: SidebarMenu(
-        onSelectPage: _onSelectPage, // Pass the navigation callback
+        onSelectPage: _onSelectPage, 
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -82,7 +82,7 @@ class _HomePageState extends State<HomePage> {
     try {
       await FirebaseAuth.instance.signOut();
       Navigator.pushReplacementNamed(
-          context, '/login'); // Replace with your login page route
+          context, '/login');
     } catch (e) {
       print("Error signing out: $e");
     }
@@ -264,14 +264,14 @@ class _HomePageState extends State<HomePage> {
                   borderData: FlBorderData(show: false),
                   barGroups: widget.barChartData.map((barGroup) {
                     return barGroup.copyWith(
-                      barsSpace: 1, // Adjust space between bars
-                      showingTooltipIndicators: [], // Show tooltip only on touch
+                      barsSpace: 1, 
+                      showingTooltipIndicators: [],
                       barRods: barGroup.barRods.map((barRod) {
                         return barRod.copyWith(
                           toY: barRod.toY,
-                          width: 55, // Adjust the width to make bars thicker
+                          width: 55, 
                           borderRadius:
-                              BorderRadius.circular(7), // No rounded corners
+                              BorderRadius.circular(7), 
                         );
                       }).toList(),
                     );
@@ -279,7 +279,7 @@ class _HomePageState extends State<HomePage> {
                   barTouchData: BarTouchData(
                     touchTooltipData: BarTouchTooltipData(
                       tooltipPadding: EdgeInsets.all(8),
-                      //tooltipBgColor: Colors.blue, // Background color of tooltip
+                      
                       getTooltipItem: (group, groupIndex, rod, rodIndex) {
                         return BarTooltipItem(
                           '${rod.toY.toStringAsFixed(2)}',
@@ -294,9 +294,9 @@ class _HomePageState extends State<HomePage> {
                         final touchedBarIndex =
                             response.spot?.touchedBarGroupIndex ?? -1;
                         if (touchedBarIndex != -1) {
-                          // Force a rebuild or update state if needed to show tooltip
+                         
                           setState(() {
-                            // Update the state if needed
+                          
                           });
                         }
                       }
@@ -363,10 +363,10 @@ Widget _buildExpenseOverviewCard(BuildContext context) {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Padding(
-            padding: const EdgeInsets.only(bottom: 8.0), // Increased padding
+            padding: const EdgeInsets.only(bottom: 8.0),
             child: const Text(
               'Expense Overview',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20), // Increased font size
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20), 
             ),
           ),
           SizedBox(
@@ -374,7 +374,7 @@ Widget _buildExpenseOverviewCard(BuildContext context) {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: SizedBox(
-                width: chartWidth, // Width to enable scrolling
+                width: chartWidth, 
                 child: LineChart(
                   LineChartData(
                     lineBarsData: widget.lineChartData.map((lineBarData) {
@@ -424,12 +424,12 @@ Widget _buildExpenseOverviewCard(BuildContext context) {
                       ),
                       topTitles: AxisTitles(
                         sideTitles: SideTitles(
-                          showTitles: false, // Hide top titles
+                          showTitles: false, 
                         ),
                       ),
                       rightTitles: AxisTitles(
                         sideTitles: SideTitles(
-                          showTitles: false, // Hide right titles
+                          showTitles: false, 
                         ),
                       ),
                     ),

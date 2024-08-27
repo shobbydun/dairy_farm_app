@@ -20,7 +20,7 @@ class _PregnancyPageState extends State<PregnancyPage> {
           padding: const EdgeInsets.all(8.0),
           child: Column(
             children: [
-              _buildPregnancyCard(context), // Pass context here
+              _buildPregnancyCard(context),
               _buildPregnancyListSection(),
             ],
           ),
@@ -29,7 +29,6 @@ class _PregnancyPageState extends State<PregnancyPage> {
     );
   }
 
-  // Method to build the Pregnancy Management Card
   Widget _buildPregnancyCard(BuildContext context) {
     return Card(
       color: Colors.white,
@@ -88,7 +87,7 @@ class _PregnancyPageState extends State<PregnancyPage> {
                 const SizedBox(height: 8.0),
                 ElevatedButton(
                   onPressed: () {
-                    _showPregnancyModal(context); // context is available here
+                    _showPregnancyModal(context);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.lightBlueAccent,
@@ -120,8 +119,8 @@ class _PregnancyPageState extends State<PregnancyPage> {
             const Text(
               'Pregnancy List',
               style: TextStyle(
-                fontSize: 20, 
-                fontWeight: FontWeight.bold, 
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
                 color: Colors.lightBlueAccent,
               ),
             ),
@@ -142,16 +141,13 @@ class _PregnancyPageState extends State<PregnancyPage> {
                     _tableHeaderCell('Actions'),
                   ],
                 ),
-                // Replace with dynamic data fetching and rendering logic
                 TableRow(
                   children: [
                     _tableCell('001'),
                     _tableCell('2024-01-15'),
                     _tableCell('2024-10-15'),
                     IconButton(
-                      onPressed: () {
-                        // Handle delete action
-                      },
+                      onPressed: () {},
                       icon: Icon(Icons.delete, color: Colors.red),
                     ),
                   ],
@@ -170,7 +166,7 @@ class _PregnancyPageState extends State<PregnancyPage> {
       child: Text(
         title,
         style: TextStyle(
-          fontWeight: FontWeight.bold, 
+          fontWeight: FontWeight.bold,
           color: Colors.lightBlueAccent,
         ),
       ),
@@ -209,7 +205,8 @@ class _PregnancyPageState extends State<PregnancyPage> {
               },
             ),
             TextButton(
-              child: Text('Submit', style: TextStyle(color: Colors.lightBlueAccent)),
+              child: Text('Submit',
+                  style: TextStyle(color: Colors.lightBlueAccent)),
               onPressed: () {
                 // Handle form submission logic here
                 Navigator.of(context).pop();
@@ -268,4 +265,3 @@ class _PregnancyPageState extends State<PregnancyPage> {
     );
   }
 }
-

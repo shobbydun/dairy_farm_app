@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-//import 'package:syncfusion_flutter_calendar/calendar.dart'; // For calendar view
 
 class DehorningPage extends StatelessWidget {
   const DehorningPage({Key? key}) : super(key: key);
@@ -102,7 +101,7 @@ class DehorningPage extends StatelessWidget {
         children: [
           Card(
             elevation: 5,
-            //
+          
           ),
           SizedBox(height: 16),
           ElevatedButton(
@@ -157,13 +156,13 @@ class DehorningPage extends StatelessWidget {
                           IconButton(
                             icon: const Icon(Icons.edit),
                             onPressed: () {
-                              // Handle edit action
+                             
                             },
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete),
                             onPressed: () {
-                              // Handle delete action
+                              
                             },
                           ),
                         ],
@@ -219,7 +218,7 @@ class DehorningPage extends StatelessWidget {
                       );
                     }).toList(),
                     onChanged: (newValue) {
-                      // Handle change
+                  
                     },
                     decoration: const InputDecoration(
                       labelText: 'Method Of Dehorning',
@@ -231,7 +230,7 @@ class DehorningPage extends StatelessWidget {
                   SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      // Handle submit logic
+                  
                     },
                     child: const Text('Submit'),
                     style: ElevatedButton.styleFrom(
@@ -268,7 +267,7 @@ class DehorningPage extends StatelessWidget {
                     );
                   }).toList(),
                   onChanged: (newValue) {
-                    // Handle selection
+                    
                   },
                   decoration: const InputDecoration(
                     labelText: 'Select Cattle',
@@ -291,7 +290,7 @@ class DehorningPage extends StatelessWidget {
                     );
                   }).toList(),
                   onChanged: (newValue) {
-                    // Handle change
+                 
                   },
                   decoration: const InputDecoration(
                     labelText: 'Method Of Dehorning',
@@ -300,7 +299,7 @@ class DehorningPage extends StatelessWidget {
                 SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () {
-                    // Handle submit logic
+                   
                     Navigator.of(context).pop();
                   },
                   child: const Text(
@@ -354,7 +353,7 @@ class DehorningPage extends StatelessWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Add form fields here similar to _buildProcedureDetails()
+          
             ],
           ),
           actions: [
@@ -366,7 +365,7 @@ class DehorningPage extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () {
-                // Handle schedule submission
+       
               },
               child: const Text('Schedule'),
               style:

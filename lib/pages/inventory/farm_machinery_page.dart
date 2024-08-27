@@ -2,7 +2,7 @@ import 'package:dairy_harbor/components/inventory_components/add_machinery_page.
 import 'package:dairy_harbor/components/inventory_components/edit_machinery_page.dart';
 import 'package:dairy_harbor/components/inventory_components/machinery_details_page.dart';
 import 'package:flutter/material.dart';
- // Import the details page
+ 
 
 class FarmMachineryPage extends StatefulWidget {
   const FarmMachineryPage({super.key});
@@ -29,7 +29,7 @@ class _FarmMachineryPageState extends State<FarmMachineryPage> {
       'condition': 'Excellent',
       'dateAcquired': '2022-06-15',
     },
-    // Add more machineries as needed
+   
   ];
 
   List<Map<String, String>> _filteredMachineries() {

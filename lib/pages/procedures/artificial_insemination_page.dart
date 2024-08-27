@@ -9,7 +9,7 @@ class ArtificialInseminationPage extends StatelessWidget {
         backgroundColor: Colors.blueAccent,
       ),
       body: Container(
-        color: Colors.grey[200], // Background color for the whole page
+        color: Colors.grey[200],
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -27,7 +27,7 @@ class ArtificialInseminationPage extends StatelessWidget {
                     borderRadius: BorderRadius.vertical(
                         top: Radius.circular(10)), // Rounded top corners
                     child: Image.asset(
-                      'assets/insem.jpeg', // Update with your image path
+                      'assets/insem.jpeg',
                       height: 200,
                       width: double.infinity,
                       fit: BoxFit.cover,
@@ -94,7 +94,6 @@ class ArtificialInseminationPage extends StatelessWidget {
                     DataColumn(label: Text('Delete')),
                   ],
                   rows: [
-                    // Example Row
                     DataRow(cells: [
                       DataCell(Text('2024-08-25')),
                       DataCell(Text('SN12345')),
@@ -102,12 +101,9 @@ class ArtificialInseminationPage extends StatelessWidget {
                       DataCell(Text('Holstein Friesian')),
                       DataCell(IconButton(
                         icon: Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          // Handle delete action
-                        },
+                        onPressed: () {},
                       )),
                     ]),
-                    // Add more rows here
                   ],
                 ),
               ),
@@ -121,8 +117,7 @@ class ArtificialInseminationPage extends StatelessWidget {
   void _showInseminationModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      isScrollControlled:
-          true, // Allows the modal to adapt its size based on its content
+      isScrollControlled: true,
       builder: (BuildContext context) {
         return SingleChildScrollView(
           child: Padding(
@@ -138,13 +133,12 @@ class ArtificialInseminationPage extends StatelessWidget {
                       ),
                 ),
                 SizedBox(height: 10),
-                // Cattle selection
+
                 DropdownButtonFormField<String>(
                   decoration: InputDecoration(labelText: 'Select Cattle'),
                   items: [
                     DropdownMenuItem(value: 'Cattle1', child: Text('Cattle1')),
                     DropdownMenuItem(value: 'Cattle2', child: Text('Cattle2')),
-                    // Add more cattle options here
                   ],
                   onChanged: (value) {},
                 ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class EditMedicinePage extends StatefulWidget {
-  final String medicineId; // ID or some identifier to fetch medicine details
+  final String medicineId;
 
   const EditMedicinePage({super.key, required this.medicineId});
 
@@ -13,19 +13,20 @@ class _EditMedicinePageState extends State<EditMedicinePage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _quantityController = TextEditingController();
+  
   final TextEditingController _expiryDateController = TextEditingController();
   final TextEditingController _supplierController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    // Fetch medicine details by ID and populate controllers
+    // Fetching medicine details by ID and populate controllers
     _fetchMedicineDetails();
   }
 
   void _fetchMedicineDetails() {
-    // Fetch medicine details using widget.medicineId
-    // For demo purposes, let's use placeholder data
+    // Fetching medicine details using widget.medicineId
+    
     _nameController.text = 'Sample Medicine';
     _quantityController.text = '10 tablets';
     _expiryDateController.text = '2025-12-01';
@@ -34,8 +35,7 @@ class _EditMedicinePageState extends State<EditMedicinePage> {
 
   void _saveChanges() {
     if (_formKey.currentState?.validate() ?? false) {
-      // Save changes to the medicine
-      // Example: Save updated data to database or API
+   
 
       Navigator.pop(context);
     }
@@ -55,7 +55,7 @@ class _EditMedicinePageState extends State<EditMedicinePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Medicine Name
+     
               _buildTextField(
                 controller: _nameController,
                 labelText: 'Name',
@@ -117,7 +117,7 @@ class _EditMedicinePageState extends State<EditMedicinePage> {
               ),
               const SizedBox(height: 24),
 
-              // Save Changes Button
+          
               ElevatedButton(
                 onPressed: _saveChanges,
                 style: ElevatedButton.styleFrom(

@@ -37,7 +37,7 @@ class AdministrativeWages extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Search Bar
+         
             Container(
               width: double.infinity,
               height: 50,
@@ -63,7 +63,7 @@ class AdministrativeWages extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Filter Options
+          
             Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Row(
@@ -78,7 +78,7 @@ class AdministrativeWages extends StatelessWidget {
                       DropdownMenuItem(value: 'Department', child: Text('Department')),
                     ],
                     onChanged: (value) {
-                      // Handle filter change
+            
                     },
                     style: TextStyle(fontSize: 16),
                   ),
@@ -86,11 +86,11 @@ class AdministrativeWages extends StatelessWidget {
               ),
             ),
 
-            // Total Wages Summary
+        
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: Text(
-                'Total Wages: Kshs 43,500', // Replace with dynamic data
+                'Total Wages: Kshs 43,500',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -161,7 +161,7 @@ class AdministrativeWages extends StatelessWidget {
                 icon: Icon(Icons.delete, color: Colors.redAccent),
                 onPressed: () {
                   showDeleteWageDialog(context, () {
-                    // Handle delete action
+                
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Wage record deleted')),
                     );
