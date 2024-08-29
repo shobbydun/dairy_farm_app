@@ -8,7 +8,7 @@ class FirestoreServices {
 
 
   // Method to fetch the business name
-  Future<String?> getBusinessName() async {
+  Future<String?> getFarmName() async {
     try {
       if (userId.isEmpty) {
         print("User ID is empty.");
@@ -19,18 +19,18 @@ class FirestoreServices {
 
       if (!docSnapshot.exists) {
         print("Document does not exist for userId: $userId");
-        return 'No Business Name';
+        return 'No farm Name';
       }
 
       final data = docSnapshot.data();
-      if (data == null || !data.containsKey('businessName')) {
-        print("Document does not contain 'businessName' field.");
+      if (data == null || !data.containsKey('farmName')) {
+        print("Document does not contain 'farmName' field.");
         return 'No Business Name';
       }
 
-      return data['businessName'] as String? ?? 'N/A';
+      return data['farmName'] as String? ?? 'N/A';
     } catch (e) {
-      print("Error fetching business name: $e");
+      print("Error fetching farm name: $e");
       return null;
     }
   }

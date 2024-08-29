@@ -61,18 +61,13 @@ class AuthService {
   // Logout function
   Future<void> logout() async {
     try {
+      // Sign out from Google
       await GoogleSignIn().signOut();
+      
+      // Sign out from Firebase
       await FirebaseAuth.instance.signOut();
-      await SignInWithApple.getAppleIDCredential(
-        webAuthenticationOptions: WebAuthenticationOptions(
-          clientId: 'com.example.app',
-          redirectUri: Uri.parse('https://example.com/callbacks/sign_in_with_apple'),
-        ),
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-      );
+      
+      // Sign out from Apple
     } catch (e) {
       print('Error signing out: $e');
     }

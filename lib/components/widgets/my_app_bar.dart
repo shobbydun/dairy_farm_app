@@ -2,7 +2,7 @@ import 'package:dairy_harbor/services_functions/auth_service.dart';
 import 'package:flutter/material.dart';
 
 class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
-  final AuthService _authService = AuthService(); // Initialize AuthService
+  final AuthService _authService = AuthService(); // Initializing AuthService
 
   @override
   Widget build(BuildContext context) {
@@ -19,9 +19,7 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
       actions: [
         IconButton(
           icon: const Icon(Icons.search),
-          onPressed: () {
-            //  search action
-          },
+          onPressed: () {},
         ),
         PopupMenuButton(
           icon: Icon(Icons.person_3),
@@ -79,7 +77,7 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                     },
                   );
 
-                  if (confirmLogout == true && Navigator.canPop(context)) {
+                  if (confirmLogout == true) {
                     try {
                       await _authService.logout();
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -88,7 +86,9 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                         ),
                       );
 
-                      Navigator.of(context).pushReplacementNamed('/login');
+                      // Redirect to login page
+                      Navigator.of(context)
+                          .pushReplacementNamed('/loginOrRegister');
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(

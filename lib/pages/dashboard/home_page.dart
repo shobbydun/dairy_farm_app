@@ -4,7 +4,7 @@ import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; 
+import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {
   final FirestoreServices firestoreServices;
@@ -20,7 +20,7 @@ class HomePage extends StatefulWidget {
     required this.pieChartData,
     required this.lineChartData,
     required this.animate,
-    this.user, 
+    this.user,
     required this.firestoreServices,
     required this.userId,
   });
@@ -30,26 +30,26 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String? businessName;
+  String? farmName;
 
   @override
   void initState() {
     super.initState();
     if (widget.user != null && widget.userId.isNotEmpty) {
-      _fetchBusinessName();
+      _fetchFarmName();
     } else {
       print("No user is currently logged in or user ID is empty.");
     }
   }
 
-  Future<void> _fetchBusinessName() async {
+  Future<void> _fetchFarmName() async {
     try {
-      final name = await widget.firestoreServices.getBusinessName();
+      final name = await widget.firestoreServices.getFarmName();
       setState(() {
-        businessName = name ?? 'No Business Name';
+        farmName = name ?? 'No farm Name';
       });
     } catch (e) {
-      print("Error fetching business name: $e");
+      print("Error fetching farm name: $e");
     }
   }
 
@@ -60,9 +60,9 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomNavbar(), 
+      appBar: CustomNavbar(),
       drawer: SidebarMenu(
-        onSelectPage: _onSelectPage, 
+        onSelectPage: _onSelectPage,
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -81,8 +81,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _signOut() async {
     try {
       await FirebaseAuth.instance.signOut();
-      Navigator.pushReplacementNamed(
-          context, '/login');
+      Navigator.pushReplacementNamed(context, '/login');
     } catch (e) {
       print("Error signing out: $e");
     }
@@ -102,9 +101,9 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text(
-              'Congratulations Munei! 🎉',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              'Congratulations ${farmName?.toUpperCase()}🎉',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
@@ -264,14 +263,13 @@ class _HomePageState extends State<HomePage> {
                   borderData: FlBorderData(show: false),
                   barGroups: widget.barChartData.map((barGroup) {
                     return barGroup.copyWith(
-                      barsSpace: 1, 
+                      barsSpace: 1,
                       showingTooltipIndicators: [],
                       barRods: barGroup.barRods.map((barRod) {
                         return barRod.copyWith(
                           toY: barRod.toY,
-                          width: 55, 
-                          borderRadius:
-                              BorderRadius.circular(7), 
+                          width: 55,
+                          borderRadius: BorderRadius.circular(7),
                         );
                       }).toList(),
                     );
@@ -279,7 +277,6 @@ class _HomePageState extends State<HomePage> {
                   barTouchData: BarTouchData(
                     touchTooltipData: BarTouchTooltipData(
                       tooltipPadding: EdgeInsets.all(8),
-                      
                       getTooltipItem: (group, groupIndex, rod, rodIndex) {
                         return BarTooltipItem(
                           '${rod.toY.toStringAsFixed(2)}',
@@ -294,10 +291,7 @@ class _HomePageState extends State<HomePage> {
                         final touchedBarIndex =
                             response.spot?.touchedBarGroupIndex ?? -1;
                         if (touchedBarIndex != -1) {
-                         
-                          setState(() {
-                          
-                          });
+                          setState(() {});
                         }
                       }
                     },
@@ -347,111 +341,108 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildExpenseOverviewCard(BuildContext context) {
+    final double chartWidth = 12 * 40.0;
 
-Widget _buildExpenseOverviewCard(BuildContext context) {
-  final double chartWidth = 12 * 40.0;
-
-  return Card(
-    color: const Color.fromARGB(255, 64, 196, 255),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(4.0),
-    ),
-    margin: const EdgeInsets.all(8.0),
-    child: Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: const Text(
-              'Expense Overview',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20), 
+    return Card(
+      color: const Color.fromARGB(255, 64, 196, 255),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(4.0),
+      ),
+      margin: const EdgeInsets.all(8.0),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: const Text(
+                'Expense Overview',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              ),
             ),
-          ),
-          SizedBox(
-            height: 200,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: chartWidth, 
-                child: LineChart(
-                  LineChartData(
-                    lineBarsData: widget.lineChartData.map((lineBarData) {
-                      return lineBarData.copyWith(
-                        isCurved: true,
-                        dotData: FlDotData(show: true),
-                        belowBarData: BarAreaData(show: false),
-                        aboveBarData: BarAreaData(show: false),
-                        barWidth: 5, 
-                      );
-                    }).toList(),
-                    titlesData: FlTitlesData(
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 30, 
-                          interval: 1, 
-                          getTitlesWidget: (value, meta) {
-                            final monthIndex = value.toInt();
-                            final date = DateTime(2024, monthIndex + 1);
-                            return SideTitleWidget(
-                              axisSide: meta.axisSide,
-                              child: Text(
-                                DateFormat('MMM').format(date),
-                                style: const TextStyle(
-                                    color: Colors.black, fontSize: 12),
-                              ),
-                            );
-                          },
+            SizedBox(
+              height: 200,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: chartWidth,
+                  child: LineChart(
+                    LineChartData(
+                      lineBarsData: widget.lineChartData.map((lineBarData) {
+                        return lineBarData.copyWith(
+                          isCurved: true,
+                          dotData: FlDotData(show: true),
+                          belowBarData: BarAreaData(show: false),
+                          aboveBarData: BarAreaData(show: false),
+                          barWidth: 5,
+                        );
+                      }).toList(),
+                      titlesData: FlTitlesData(
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 30,
+                            interval: 1,
+                            getTitlesWidget: (value, meta) {
+                              final monthIndex = value.toInt();
+                              final date = DateTime(2024, monthIndex + 1);
+                              return SideTitleWidget(
+                                axisSide: meta.axisSide,
+                                child: Text(
+                                  DateFormat('MMM').format(date),
+                                  style: const TextStyle(
+                                      color: Colors.black, fontSize: 12),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 50,
+                            getTitlesWidget: (value, meta) {
+                              return SideTitleWidget(
+                                axisSide: meta.axisSide,
+                                child: Text(
+                                  '${value.toInt()}',
+                                  style: const TextStyle(
+                                      color: Colors.black, fontSize: 12),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        topTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: false,
+                          ),
+                        ),
+                        rightTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: false,
+                          ),
                         ),
                       ),
-                      leftTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 50,
-                          getTitlesWidget: (value, meta) {
-                            return SideTitleWidget(
-                              axisSide: meta.axisSide,
-                              child: Text(
-                                '${value.toInt()}',
-                                style: const TextStyle(
-                                    color: Colors.black, fontSize: 12),
-                              ),
-                            );
-                          },
-                        ),
+                      borderData: FlBorderData(
+                        show: false, // Hide the border
                       ),
-                      topTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: false, 
-                        ),
+                      gridData: FlGridData(
+                        show: false, // Hide the grid lines
                       ),
-                      rightTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: false, 
-                        ),
-                      ),
-                    ),
-                    borderData: FlBorderData(
-                      show: false, // Hide the border
-                    ),
-                    gridData: FlGridData(
-                      show: false, // Hide the grid lines
-                    ),
-                    lineTouchData: LineTouchData(
-                      touchTooltipData: LineTouchTooltipData(
+                      lineTouchData: LineTouchData(
+                        touchTooltipData: LineTouchTooltipData(),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
-
+    );
+  }
 }

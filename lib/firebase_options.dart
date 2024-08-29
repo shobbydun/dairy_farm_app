@@ -41,53 +41,49 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyB5k2qKMrKfH0b1G4ZPginJx4J8y3iKTDo',
-    appId: '1:338147366713:web:2710eb0627893d142bbae8',
-    messagingSenderId: '338147366713',
-    projectId: 'scupay-aa2ee',
-    authDomain: 'scupay-aa2ee.firebaseapp.com',
-    databaseURL: 'https://scupay-aa2ee-default-rtdb.firebaseio.com',
-    storageBucket: 'scupay-aa2ee.appspot.com',
-    measurementId: 'G-HP1K8M1K7J',
+    apiKey: 'AIzaSyC2z1c-Uiv50qxPZOwKuqh1VG87KzmlkNw',
+    appId: '1:180944097442:web:cb6244d800e306cee407fb',
+    messagingSenderId: '180944097442',
+    projectId: 'dairy-harbor-mobile',
+    authDomain: 'dairy-harbor-mobile.firebaseapp.com',
+    storageBucket: 'dairy-harbor-mobile.appspot.com',
+    measurementId: 'G-HQB2HLWKV7',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyArt-GnJOM-2SHgwO12GyQPxRYX3mURIvc',
-    appId: '1:338147366713:android:e69bc7b7888b34c72bbae8',
-    messagingSenderId: '338147366713',
-    projectId: 'scupay-aa2ee',
-    databaseURL: 'https://scupay-aa2ee-default-rtdb.firebaseio.com',
-    storageBucket: 'scupay-aa2ee.appspot.com',
+    apiKey: 'AIzaSyABxoAiXruglakT_sz-cn8yBFYOyR86Q-s',
+    appId: '1:180944097442:android:5444a9ec0636b3c7e407fb',
+    messagingSenderId: '180944097442',
+    projectId: 'dairy-harbor-mobile',
+    storageBucket: 'dairy-harbor-mobile.appspot.com',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCTFCRU4swOfriCx2zZvRZYSFWBaUCAfJw',
-    appId: '1:338147366713:ios:10b5e7f0f81ac77e2bbae8',
-    messagingSenderId: '338147366713',
-    projectId: 'scupay-aa2ee',
-    databaseURL: 'https://scupay-aa2ee-default-rtdb.firebaseio.com',
-    storageBucket: 'scupay-aa2ee.appspot.com',
+    apiKey: 'AIzaSyAxWpf6cpwKtRdrBSiCEbvKMqYvIZXRqmA',
+    appId: '1:180944097442:ios:333e40231e8d8eb1e407fb',
+    messagingSenderId: '180944097442',
+    projectId: 'dairy-harbor-mobile',
+    storageBucket: 'dairy-harbor-mobile.appspot.com',
     iosBundleId: 'com.example.dairyHarbor',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCTFCRU4swOfriCx2zZvRZYSFWBaUCAfJw',
-    appId: '1:338147366713:ios:10b5e7f0f81ac77e2bbae8',
-    messagingSenderId: '338147366713',
-    projectId: 'scupay-aa2ee',
-    databaseURL: 'https://scupay-aa2ee-default-rtdb.firebaseio.com',
-    storageBucket: 'scupay-aa2ee.appspot.com',
+    apiKey: 'AIzaSyAxWpf6cpwKtRdrBSiCEbvKMqYvIZXRqmA',
+    appId: '1:180944097442:ios:333e40231e8d8eb1e407fb',
+    messagingSenderId: '180944097442',
+    projectId: 'dairy-harbor-mobile',
+    storageBucket: 'dairy-harbor-mobile.appspot.com',
     iosBundleId: 'com.example.dairyHarbor',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyB5k2qKMrKfH0b1G4ZPginJx4J8y3iKTDo',
-    appId: '1:338147366713:web:97b6c127fe3661502bbae8',
-    messagingSenderId: '338147366713',
-    projectId: 'scupay-aa2ee',
-    authDomain: 'scupay-aa2ee.firebaseapp.com',
-    databaseURL: 'https://scupay-aa2ee-default-rtdb.firebaseio.com',
-    storageBucket: 'scupay-aa2ee.appspot.com',
-    measurementId: 'G-E18H2EJ40W',
+    apiKey: 'AIzaSyC2z1c-Uiv50qxPZOwKuqh1VG87KzmlkNw',
+    appId: '1:180944097442:web:ea9b99d3d8fc9a8ce407fb',
+    messagingSenderId: '180944097442',
+    projectId: 'dairy-harbor-mobile',
+    authDomain: 'dairy-harbor-mobile.firebaseapp.com',
+    storageBucket: 'dairy-harbor-mobile.appspot.com',
+    measurementId: 'G-5NPCQT8BNY',
   );
+
 }

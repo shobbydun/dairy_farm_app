@@ -1,124 +1,26 @@
 {
   "project_info": {
-    "project_number": "338147366713",
-    "firebase_url": "https://scupay-aa2ee-default-rtdb.firebaseio.com",
-    "project_id": "scupay-aa2ee",
-    "storage_bucket": "scupay-aa2ee.appspot.com"
+    "project_number": "180944097442",
+    "project_id": "dairy-harbor-mobile",
+    "storage_bucket": "dairy-harbor-mobile.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:338147366713:android:1a16876d71db247b2bbae8",
-        "android_client_info": {
-          "package_name": "com.example.admin.augscan"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "338147366713-h14kn9vdjcfmsfj4k6f2aksf0h1dihph.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyArt-GnJOM-2SHgwO12GyQPxRYX3mURIvc"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "338147366713-h14kn9vdjcfmsfj4k6f2aksf0h1dihph.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:338147366713:android:3da1d9820c3b290b2bbae8",
-        "android_client_info": {
-          "package_name": "com.example.admin.scuepay"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "338147366713-h14kn9vdjcfmsfj4k6f2aksf0h1dihph.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyArt-GnJOM-2SHgwO12GyQPxRYX3mURIvc"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "338147366713-h14kn9vdjcfmsfj4k6f2aksf0h1dihph.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:338147366713:android:e69bc7b7888b34c72bbae8",
+        "mobilesdk_app_id": "1:180944097442:android:5444a9ec0636b3c7e407fb",
         "android_client_info": {
           "package_name": "com.example.dairy_harbor"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "338147366713-h14kn9vdjcfmsfj4k6f2aksf0h1dihph.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyArt-GnJOM-2SHgwO12GyQPxRYX3mURIvc"
+          "current_key": "AIzaSyABxoAiXruglakT_sz-cn8yBFYOyR86Q-s"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "338147366713-h14kn9vdjcfmsfj4k6f2aksf0h1dihph.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:338147366713:android:f7033845429c160f2bbae8",
-        "android_client_info": {
-          "package_name": "com.example.scanpay"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "338147366713-h14kn9vdjcfmsfj4k6f2aksf0h1dihph.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyArt-GnJOM-2SHgwO12GyQPxRYX3mURIvc"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "338147366713-h14kn9vdjcfmsfj4k6f2aksf0h1dihph.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }
