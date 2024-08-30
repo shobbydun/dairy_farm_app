@@ -1,6 +1,9 @@
+import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EditMachineryPage extends StatefulWidget {
+  final String machineryId;
   final String machineryName;
   final String machineryType;
   final String machineryCondition;
@@ -8,11 +11,11 @@ class EditMachineryPage extends StatefulWidget {
 
   const EditMachineryPage({
     super.key,
+    required this.machineryId,
     required this.machineryName,
     required this.machineryType,
     required this.machineryCondition,
     required this.dateAcquired,
-  
   });
 
   @override
@@ -22,23 +25,53 @@ class EditMachineryPage extends StatefulWidget {
 class _EditMachineryPageState extends State<EditMachineryPage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
-  late TextEditingController _typeController;
   late TextEditingController _conditionController;
   late TextEditingController _dateController;
+
+  String _selectedType = 'Agricultural'; // Default value for dropdown
+
+  late FirestoreServices _firestoreServices;
 
   @override
   void initState() {
     super.initState();
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    _firestoreServices = FirestoreServices(userId);
+
     _nameController = TextEditingController(text: widget.machineryName);
-    _typeController = TextEditingController(text: widget.machineryType);
+    _selectedType = widget.machineryType;
     _conditionController = TextEditingController(text: widget.machineryCondition);
     _dateController = TextEditingController(text: widget.dateAcquired);
+  }
+
+  Future<void> _updateMachinery() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      try {
+        await _firestoreServices.updateMachinery(
+          widget.machineryId,
+          {
+            'name': _nameController.text,
+            'type': _selectedType, 
+            'condition': _conditionController.text,
+            'dateAcquired': _dateController.text,
+          },
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Machinery details updated')),
+        );
+        Navigator.pop(context);
+      } catch (e) {
+        print('Error updating machinery: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating machinery')),
+        );
+      }
+    }
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _typeController.dispose();
     _conditionController.dispose();
     _dateController.dispose();
     super.dispose();
@@ -58,7 +91,6 @@ class _EditMachineryPageState extends State<EditMachineryPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Name Field
               _buildTextField(
                 controller: _nameController,
                 labelText: 'Name',
@@ -72,17 +104,17 @@ class _EditMachineryPageState extends State<EditMachineryPage> {
                 },
               ),
               const SizedBox(height: 16),
-
-              // Type Field
-              _buildTextField(
-                controller: _typeController,
+              _buildDropdownField(
                 labelText: 'Type',
-                hintText: 'Enter machinery type',
-                icon: Icons.category,
+                value: _selectedType,
+                items: <String>['Agricultural', 'Construction', 'Others'],
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedType = newValue!;
+                  });
+                },
               ),
               const SizedBox(height: 16),
-
-              // Condition Field
               _buildTextField(
                 controller: _conditionController,
                 labelText: 'Condition',
@@ -90,8 +122,6 @@ class _EditMachineryPageState extends State<EditMachineryPage> {
                 icon: Icons.warning,
               ),
               const SizedBox(height: 16),
-
-              // Date Acquired Field
               _buildTextField(
                 controller: _dateController,
                 labelText: 'Date Acquired',
@@ -100,18 +130,8 @@ class _EditMachineryPageState extends State<EditMachineryPage> {
                 keyboardType: TextInputType.datetime,
               ),
               const SizedBox(height: 24),
-
-              // Save Button
               ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState?.validate() ?? false) {
-                 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Machinery details updated')),
-                    );
-                    Navigator.pop(context); 
-                  }
-                },
+                onPressed: _updateMachinery,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueAccent,
                   shape: RoundedRectangleBorder(
@@ -155,6 +175,35 @@ class _EditMachineryPageState extends State<EditMachineryPage> {
       ),
       keyboardType: keyboardType,
       validator: validator,
+    );
+  }
+
+  Widget _buildDropdownField({
+    required String labelText,
+    required String value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      items: items.map((String item) {
+        return DropdownMenuItem<String>(
+          value: item,
+          child: Text(item),
+        );
+      }).toList(),
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: labelText,
+        prefixIcon: Icon(Icons.category, color: Colors.blueAccent),
+        filled: true,
+        fillColor: Colors.blueGrey[50],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
     );
   }
 }

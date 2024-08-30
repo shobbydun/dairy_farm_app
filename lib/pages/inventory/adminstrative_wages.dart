@@ -1,10 +1,106 @@
 import 'package:dairy_harbor/components/inventory_components/add_wage_page.dart';
 import 'package:dairy_harbor/components/inventory_components/edit_wage_page.dart';
-import 'package:dairy_harbor/services_functions/delete_wage_page.dart';
+import 'package:dairy_harbor/services_functions/firestore_services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-class AdministrativeWages extends StatelessWidget {
-  const AdministrativeWages({super.key});
+class AdministrativeWages extends StatefulWidget {
+  @override
+  _AdministrativeWagesState createState() => _AdministrativeWagesState();
+}
+
+class _AdministrativeWagesState extends State<AdministrativeWages> {
+  late FirestoreServices _firestoreServices;
+  List<Map<String, dynamic>> _wages = [];
+  List<Map<String, dynamic>> _filteredWages = [];
+  String _selectedFilter = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    _firestoreServices = FirestoreServices(userId);
+    _loadWages();
+    _searchController.addListener(_filterWages);
+  }
+
+  void _loadWages() async {
+    try {
+      final wages = await _firestoreServices.getWages();
+      setState(() {
+        _wages = wages;
+        _filteredWages = wages;
+      });
+    } catch (e) {
+      print("Error loading wages: $e");
+    }
+  }
+
+  void _addWage() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => AddWagePage()),
+    );
+    _loadWages();
+  }
+
+  void _editWage(String docId, String employeeName, String department, String date, String wage) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditWagePage(
+          docId: docId,
+          employeeName: employeeName,
+          department: department,
+          date: date,
+          wage: wage,
+        ),
+      ),
+    );
+    _loadWages();
+  }
+
+  void _deleteWage(String docId) async {
+    try {
+      await _firestoreServices.deleteWage(docId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Wage record deleted')),
+      );
+      _loadWages();
+    } catch (e) {
+      print("Error deleting wage: $e");
+    }
+  }
+
+  void _filterWages() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredWages = _wages.where((wage) {
+        final name = (wage['employeeName'] ?? '').toLowerCase();
+        final department = (wage['department'] ?? '').toLowerCase();
+        final date = (wage['date'] ?? '').toLowerCase();
+        final wageStr = (wage['wage'] ?? '').toLowerCase();
+
+        if (_selectedFilter == 'Date') {
+          return date.contains(query);
+        } else if (_selectedFilter == 'Employee') {
+          return name.contains(query);
+        } else if (_selectedFilter == 'Department') {
+          return department.contains(query);
+        } else {
+          return name.contains(query) || department.contains(query) || date.contains(query) || wageStr.contains(query);
+        }
+      }).toList();
+    });
+  }
+
+  void _applyFilter(String? value) {
+    setState(() {
+      _selectedFilter = value ?? '';
+      _filterWages();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,12 +119,7 @@ class AdministrativeWages extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.add),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => AddWagePage()),
-              );
-            },
+            onPressed: _addWage,
           ),
         ],
       ),
@@ -37,7 +128,6 @@ class AdministrativeWages extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-         
             Container(
               width: double.infinity,
               height: 50,
@@ -53,44 +143,66 @@ class AdministrativeWages extends StatelessWidget {
                 ],
               ),
               child: TextField(
+                controller: _searchController,
                 decoration: InputDecoration(
                   border: InputBorder.none,
-                  hintText: 'Search Administrative Wages',
+                  hintText: 'Search by Employee Name, Department, or Date',
                   prefixIcon: Icon(Icons.search, color: Colors.grey),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 20.0),
                 ),
               ),
             ),
             const SizedBox(height: 20),
-
-          
             Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Filter by:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  DropdownButton<String>(
-                    hint: Text('Select filter'),
-                    items: [
-                      DropdownMenuItem(value: 'Date', child: Text('Date')),
-                      DropdownMenuItem(value: 'Employee', child: Text('Employee')),
-                      DropdownMenuItem(value: 'Department', child: Text('Department')),
-                    ],
-                    onChanged: (value) {
-            
-                    },
-                    style: TextStyle(fontSize: 16),
+                  Text(
+                    'Filter by:',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(7),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.blueAccent.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: DropdownButton<String>(
+                      hint: Text('Select filter'),
+                      value: _selectedFilter.isNotEmpty ? _selectedFilter : null,
+                      items: [
+                        DropdownMenuItem(
+                          value: 'Date',
+                          child: Text('Date', style: TextStyle(color: Colors.black)),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Employee',
+                          child: Text('Employee', style: TextStyle(color: Colors.black)),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Department',
+                          child: Text('Department', style: TextStyle(color: Colors.black)),
+                        ),
+                      ],
+                      onChanged: _applyFilter,
+                      style: TextStyle(fontSize: 16, color: Colors.black),
+                      isExpanded: false,
+                    ),
                   ),
                 ],
               ),
             ),
-
-        
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: Text(
-                'Total Wages: Kshs 43,500',
+                'Total Wages: Kshs ${_calculateTotalWages()}',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -98,29 +210,80 @@ class AdministrativeWages extends StatelessWidget {
                 ),
               ),
             ),
-
-            // Administrative Wages Table
             Expanded(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  columnSpacing: 16.0,
-                  headingRowHeight: 56.0,
-                  dataRowHeight: 60.0,
-                  columns: const [
-                    DataColumn(label: Text('Employee Name', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Department', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Date', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Wage', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
-                  ],
-                  rows: [
-                    _buildDataRow(context, 'John Doe', 'Finance', '2024-08-01', 'Kshs 21,500'),
-                    _buildDataRow(context, 'Jane Smith', 'Security', '2024-08-01', 'Kshs 22,000'),
-                    _buildDataRow(context, 'Alice Johnson', 'Maintenance', '2024-08-05', 'Kshs 25,000'),
-                    _buildDataRow(context, 'Bob Brown', 'IT', '2024-08-10', 'Kshs 28,000'),
-                    _buildDataRow(context, 'Carol White', 'Admin', '2024-08-15', 'Kshs 30,000'),
-                  ],
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: DataTable(
+                    columnSpacing: 16.0,
+                    headingRowHeight: 56.0,
+                    dataRowHeight: 60.0,
+                    columns: const [
+                      DataColumn(
+                          label: Text(
+                            'Employee Name',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          )),
+                      DataColumn(
+                          label: Text(
+                            'Department',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          )),
+                      DataColumn(
+                          label: Text(
+                            'Date',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          )),
+                      DataColumn(
+                          label: Text(
+                            'Wage',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          )),
+                      DataColumn(
+                          label: Text(
+                            'Actions',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          )),
+                    ],
+                    rows: _filteredWages.map((wage) {
+                      return DataRow(
+                        cells: [
+                          DataCell(Text(wage['employeeName'] ?? '')),
+                          DataCell(Text(wage['department'] ?? '')),
+                          DataCell(Text(wage['date'] ?? '')),
+                          DataCell(Text(wage['wage'] ?? '')),
+                          DataCell(
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: Icon(Icons.edit, color: Colors.blueAccent),
+                                  onPressed: () {
+                                    _editWage(
+                                      wage['id'] ?? '',
+                                      wage['employeeName'] ?? '',
+                                      wage['department'] ?? '',
+                                      wage['date'] ?? '',
+                                      wage['wage'] ?? '',
+                                    );
+                                  },
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.delete, color: Colors.redAccent),
+                                  onPressed: () {
+                                    showDeleteWageDialog(context, () {
+                                      _deleteWage(wage['id'] ?? '');
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
                 ),
               ),
             ),
@@ -130,48 +293,42 @@ class AdministrativeWages extends StatelessWidget {
     );
   }
 
-  DataRow _buildDataRow(BuildContext context, String name, String department, String date, String wage) {
-    return DataRow(
-      cells: [
-        DataCell(Text(name)),
-        DataCell(Text(department)),
-        DataCell(Text(date)),
-        DataCell(Text(wage)),
-        DataCell(
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: Icon(Icons.edit, color: Colors.blueAccent),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => EditWagePage(
-                        employeeName: name,
-                        department: department,
-                        date: date,
-                        wage: wage,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              IconButton(
-                icon: Icon(Icons.delete, color: Colors.redAccent),
-                onPressed: () {
-                  showDeleteWageDialog(context, () {
-                
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Wage record deleted')),
-                    );
-                  });
-                },
-              ),
-            ],
-          ),
-        ),
-      ],
+  // Calculate total wages
+  String _calculateTotalWages() {
+    double total = 0.0;
+    for (var wage in _filteredWages) {
+      final wageString = (wage['wage'] ?? '').replaceAll('Kshs ', '').replaceAll(',', '');
+      final wageValue = double.tryParse(wageString) ?? 0.0;
+      total += wageValue;
+    }
+    return total.toStringAsFixed(2);
+  }
+
+  // Show delete wage dialog
+  void showDeleteWageDialog(BuildContext context, VoidCallback onConfirm) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Delete Wage'),
+          content: Text('Are you sure you want to delete this wage record?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                onConfirm();
+              },
+              child: Text('Delete'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

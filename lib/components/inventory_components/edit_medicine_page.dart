@@ -1,4 +1,6 @@
+import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EditMedicinePage extends StatefulWidget {
   final String medicineId;
@@ -13,31 +15,53 @@ class _EditMedicinePageState extends State<EditMedicinePage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _quantityController = TextEditingController();
-  
   final TextEditingController _expiryDateController = TextEditingController();
   final TextEditingController _supplierController = TextEditingController();
+
+  late FirestoreServices _firestoreServices;
 
   @override
   void initState() {
     super.initState();
-    // Fetching medicine details by ID and populate controllers
+    _firestoreServices = FirestoreServices(FirebaseAuth.instance.currentUser!.uid);
     _fetchMedicineDetails();
   }
 
-  void _fetchMedicineDetails() {
-    // Fetching medicine details using widget.medicineId
-    
-    _nameController.text = 'Sample Medicine';
-    _quantityController.text = '10 tablets';
-    _expiryDateController.text = '2025-12-01';
-    _supplierController.text = 'Sample Supplier';
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _quantityController.dispose();
+    _expiryDateController.dispose();
+    _supplierController.dispose();
+    super.dispose();
   }
 
-  void _saveChanges() {
-    if (_formKey.currentState?.validate() ?? false) {
-   
+  Future<void> _fetchMedicineDetails() async {
+    try {
+      final medicines = await _firestoreServices.getMedicines();
+      final medicine = medicines.firstWhere((med) => med['id'] == widget.medicineId);
+      _nameController.text = medicine['name'];
+      _quantityController.text = medicine['quantity'];
+      _expiryDateController.text = medicine['expiryDate'];
+      _supplierController.text = medicine['supplier'];
+    } catch (e) {
+      print('Error fetching medicine details: $e');
+    }
+  }
 
-      Navigator.pop(context);
+  Future<void> _saveChanges() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      try {
+        await _firestoreServices.updateMedicine(widget.medicineId, {
+          'name': _nameController.text,
+          'quantity': _quantityController.text,
+          'expiryDate': _expiryDateController.text,
+          'supplier': _supplierController.text,
+        });
+        Navigator.pop(context);
+      } catch (e) {
+        print('Error saving changes: $e');
+      }
     }
   }
 
@@ -55,7 +79,6 @@ class _EditMedicinePageState extends State<EditMedicinePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-     
               _buildTextField(
                 controller: _nameController,
                 labelText: 'Name',
@@ -69,8 +92,6 @@ class _EditMedicinePageState extends State<EditMedicinePage> {
                 },
               ),
               const SizedBox(height: 16),
-              
-              // Quantity
               _buildTextField(
                 controller: _quantityController,
                 labelText: 'Quantity',
@@ -85,8 +106,6 @@ class _EditMedicinePageState extends State<EditMedicinePage> {
                 },
               ),
               const SizedBox(height: 16),
-
-              // Expiry Date
               _buildTextField(
                 controller: _expiryDateController,
                 labelText: 'Expiry Date',
@@ -101,8 +120,6 @@ class _EditMedicinePageState extends State<EditMedicinePage> {
                 },
               ),
               const SizedBox(height: 16),
-
-              // Supplier
               _buildTextField(
                 controller: _supplierController,
                 labelText: 'Supplier',
@@ -116,8 +133,6 @@ class _EditMedicinePageState extends State<EditMedicinePage> {
                 },
               ),
               const SizedBox(height: 24),
-
-          
               ElevatedButton(
                 onPressed: _saveChanges,
                 style: ElevatedButton.styleFrom(

@@ -1,5 +1,7 @@
 import 'package:dairy_harbor/services_functions/auth_service.dart';
+import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class SidebarMenu extends StatefulWidget {
   final Function(String) onSelectPage;
@@ -23,6 +25,8 @@ class _SidebarMenuState extends State<SidebarMenu> {
 
   @override
   Widget build(BuildContext context) {
+    final firestoreService = Provider.of<FirestoreServices>(context);
+
     return Drawer(
       child: Container(
         decoration: BoxDecoration(
@@ -34,22 +38,64 @@ class _SidebarMenuState extends State<SidebarMenu> {
         ),
         child: Column(
           children: [
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: CircleAvatar(
-                radius: 50,
-                backgroundImage: AssetImage('assets/download.png'),
-              ),
-            ),
-            const Text(
-              'Munei Farm',
-              style: TextStyle(
-                fontFamily: 'Times New Roman',
-                fontWeight: FontWeight.bold,
-                fontSize: 24,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
+            FutureBuilder<Map<String, dynamic>?>(
+              future: firestoreService.getProfile(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.green,
+                    ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return const Center(
+                    child: Text(
+                      'Error loading profile',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  );
+                }
+
+                if (!snapshot.hasData || snapshot.data == null) {
+                  return const Center(
+                    child: CircleAvatar(
+                      radius: 50,
+                      backgroundColor: Colors.blueAccent,
+                    ),
+                  );
+                }
+
+                final profile = snapshot.data;
+                final profileImageUrl = profile?['profileImage'] as String?;
+                final fullName = profile?['farmName'] as String? ?? 'User';
+
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundImage: profileImageUrl != null
+                            ? NetworkImage(profileImageUrl)
+                            : AssetImage('assets/download.png')
+                                as ImageProvider,
+                      ),
+                    ),
+                    Text(
+                      fullName,
+                      style: const TextStyle(
+                        fontFamily: 'Times New Roman',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 20),
             Expanded(
@@ -135,6 +181,13 @@ class _SidebarMenuState extends State<SidebarMenu> {
                         },
                       ),
                       _buildSubMenuItem(
+                        text: 'Inventory Main',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushNamed(context, '/inventory');
+                        },
+                      ),
+                      _buildSubMenuItem(
                         text: 'Farm Machinery',
                         onTap: () {
                           Navigator.pop(context);
@@ -146,13 +199,6 @@ class _SidebarMenuState extends State<SidebarMenu> {
                         onTap: () {
                           Navigator.pop(context);
                           Navigator.pushNamed(context, '/feeds');
-                        },
-                      ),
-                      _buildSubMenuItem(
-                        text: 'Inventory Main',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.pushNamed(context, '/inventory');
                         },
                       ),
                       _buildSubMenuItem(

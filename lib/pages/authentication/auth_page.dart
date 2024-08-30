@@ -15,7 +15,6 @@ class AuthPage extends StatelessWidget {
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            // While waiting for the auth state to be determined, showing a loading spinner
             return Center(child: CircularProgressIndicator());
           }
 
@@ -26,7 +25,7 @@ class AuthPage extends StatelessWidget {
               pieChartData: _createPieChartData(), 
               lineChartData: _createLineChartData(),
               animate: true,
-              firestoreServices: FirestoreServices(user!.uid), // Pass the actual user ID
+              firestoreServices: FirestoreServices(user!.uid), 
               user: user, 
               userId: user.uid, 
             );

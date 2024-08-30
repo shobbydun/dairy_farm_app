@@ -36,21 +36,40 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        StreamProvider<User?>(
+          create: (context) => FirebaseAuth.instance.authStateChanges(),
+          initialData: null,
+        ),
+        ChangeNotifierProxyProvider<User?, FirestoreServices>(
+          create: (context) => FirestoreServices(''),
+          update: (context, user, firestoreServices) {
+            if (user != null) {
+              return FirestoreServices(user.uid);
+            }
+            return firestoreServices ?? FirestoreServices('');
+          },
+        ),
+      ],
+      child: MyApp(),
+    ),
+  );
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
- 
   User? get user => FirebaseAuth.instance.currentUser;
 
   @override

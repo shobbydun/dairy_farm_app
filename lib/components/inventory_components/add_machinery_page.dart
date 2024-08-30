@@ -1,4 +1,7 @@
+import 'package:dairy_harbor/services_functions/firestore_services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class AddMachineryPage extends StatefulWidget {
   const AddMachineryPage({super.key});
@@ -7,13 +10,63 @@ class AddMachineryPage extends StatefulWidget {
   _AddMachineryPageState createState() => _AddMachineryPageState();
 }
 
-
 class _AddMachineryPageState extends State<AddMachineryPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _typeController = TextEditingController();
   final TextEditingController _conditionController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
+  
+  String _selectedType = 'Agricultural'; // Default value for dropdown
+
+  late FirestoreServices _firestoreServices;
+
+  @override
+  void initState() {
+    super.initState();
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    _firestoreServices = FirestoreServices(userId);
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? selectedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+
+    if (selectedDate != null) {
+      // selected date
+      final DateFormat formatter = DateFormat('yyyy-MM-dd');
+      final String formattedDate = formatter.format(selectedDate);
+
+      setState(() {
+        _dateController.text = formattedDate;
+      });
+    }
+  }
+
+  Future<void> _addMachinery() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      try {
+        await _firestoreServices.addMachinery(
+          _nameController.text,
+          _selectedType, 
+          _conditionController.text,
+          _dateController.text,
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Machinery record added')),
+        );
+        Navigator.pop(context); 
+      } catch (e) {
+        print('Error adding machinery: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding machinery')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +82,6 @@ class _AddMachineryPageState extends State<AddMachineryPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Name Field
               _buildTextField(
                 controller: _nameController,
                 labelText: 'Name',
@@ -43,17 +95,17 @@ class _AddMachineryPageState extends State<AddMachineryPage> {
                 },
               ),
               const SizedBox(height: 16),
-
-              // Type Field
-              _buildTextField(
-                controller: _typeController,
+              _buildDropdownField(
                 labelText: 'Type',
-                hintText: 'Enter machinery type',
-                icon: Icons.category,
+                value: _selectedType,
+                items: <String>['Agricultural', 'Construction', 'Others'],
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedType = newValue!;
+                  });
+                },
               ),
               const SizedBox(height: 16),
-
-              // Condition Field
               _buildTextField(
                 controller: _conditionController,
                 labelText: 'Condition',
@@ -61,28 +113,21 @@ class _AddMachineryPageState extends State<AddMachineryPage> {
                 icon: Icons.warning,
               ),
               const SizedBox(height: 16),
-
-              // Date Acquired Field
-              _buildTextField(
-                controller: _dateController,
-                labelText: 'Date Acquired',
-                hintText: 'YYYY-MM-DD',
-                icon: Icons.calendar_today,
-                keyboardType: TextInputType.datetime,
+              GestureDetector(
+                onTap: () => _selectDate(context), 
+                child: AbsorbPointer(
+                  child: _buildTextField(
+                    controller: _dateController,
+                    labelText: 'Date Acquired',
+                    hintText: 'YYYY-MM-DD',
+                    icon: Icons.calendar_today,
+                    keyboardType: TextInputType.datetime,
+                  ),
+                ),
               ),
               const SizedBox(height: 24),
-
-              // Save Button
               ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState?.validate() ?? false) {
-                    // Handle form submission
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Machinery record added')),
-                    );
-                    Navigator.pop(context); // Go back to the previous screen
-                  }
-                },
+                onPressed: _addMachinery,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueAccent,
                   shape: RoundedRectangleBorder(
@@ -126,6 +171,35 @@ class _AddMachineryPageState extends State<AddMachineryPage> {
       ),
       keyboardType: keyboardType,
       validator: validator,
+    );
+  }
+
+  Widget _buildDropdownField({
+    required String labelText,
+    required String value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      items: items.map((String item) {
+        return DropdownMenuItem<String>(
+          value: item,
+          child: Text(item),
+        );
+      }).toList(),
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: labelText,
+        prefixIcon: Icon(Icons.category, color: Colors.blueAccent),
+        filled: true,
+        fillColor: Colors.blueGrey[50],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
     );
   }
 }

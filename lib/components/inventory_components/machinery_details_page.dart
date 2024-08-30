@@ -1,6 +1,9 @@
+import 'package:dairy_harbor/services_functions/firestore_services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-class MachineryDetailsPage extends StatelessWidget {
+class MachineryDetailsPage extends StatefulWidget {
+  final String machineryId;
   final String machineryName;
   final String machineryType;
   final String machineryCondition;
@@ -8,13 +11,18 @@ class MachineryDetailsPage extends StatelessWidget {
 
   const MachineryDetailsPage({
     super.key,
+    required this.machineryId,
     required this.machineryName,
     required this.machineryType,
     required this.machineryCondition,
     required this.dateAcquired,
   });
 
+  @override
+  _MachineryDetailsPageState createState() => _MachineryDetailsPageState();
+}
 
+class _MachineryDetailsPageState extends State<MachineryDetailsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -27,7 +35,6 @@ class MachineryDetailsPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Card for Machinery Details
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(
@@ -38,30 +45,35 @@ class MachineryDetailsPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildDetailRow(Icons.settings, 'Name:', machineryName),
-                    _buildDetailRow(Icons.category, 'Type:', machineryType),
-                    _buildDetailRow(Icons.health_and_safety, 'Condition:', machineryCondition),
-                    _buildDetailRow(Icons.date_range, 'Date Acquired:', dateAcquired),
+                    _buildDetailRow(
+                        Icons.settings, 'Name:', widget.machineryName),
+                    _buildDetailRow(
+                        Icons.category, 'Type:', widget.machineryType),
+                    _buildDetailRow(Icons.health_and_safety, 'Condition:',
+                        widget.machineryCondition),
+                    _buildDetailRow(Icons.date_range, 'Date Acquired:',
+                        widget.dateAcquired),
                   ],
                 ),
               ),
             ),
             SizedBox(height: 20),
-            // Back Button
             ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
+              onPressed: _showDeleteConfirmationDialog,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
+                backgroundColor: Colors.red,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 padding: EdgeInsets.symmetric(vertical: 16),
               ),
               child: Text(
-                'Back',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                'Delete',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],
@@ -77,12 +89,63 @@ class MachineryDetailsPage extends StatelessWidget {
         children: [
           Icon(icon, color: Colors.blueAccent),
           SizedBox(width: 10),
-          Text(
-            '$label $value',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          Expanded(
+            child: Text(
+              '$label $value',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  void _showDeleteConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text('Confirm Deletion'),
+          content:
+              Text('Are you sure you want to delete this machinery record?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(); // Close the dialog
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop(); // Close the dialog
+
+                // Perform deletion operation
+                final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+                final firestoreServices = FirestoreServices(userId);
+
+                try {
+                  await firestoreServices.deleteMachinery(widget.machineryId);
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Machinery record deleted')),
+                    );
+                    Navigator.of(context).pop(); // Go back to the previous page
+                  }
+                } catch (e) {
+                  print('Error deleting machinery: $e');
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error deleting machinery')),
+                    );
+                  }
+                }
+              },
+              child: Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
     );
   }
 }

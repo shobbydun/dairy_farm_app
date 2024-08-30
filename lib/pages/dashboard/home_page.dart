@@ -107,7 +107,7 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 8),
             Text(
-                'Welcome to your dashboard, Check your new badge in your profile.'),
+                'Welcome to your dashboard, Check your farm information in your profile.'),
             const SizedBox(height: 16),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,

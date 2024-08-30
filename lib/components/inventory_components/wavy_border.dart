@@ -12,14 +12,14 @@ class WavyBorderPainter extends CustomPainter {
     double waveHeight = 20;
     double waveLength = 40;
 
-   
     path.moveTo(0, size.height * 0.25);
 
-   
     for (double x = 0; x <= size.width; x += waveLength / 2) {
-      path.lineTo(x, size.height * 0.25 + waveHeight * ((x / waveLength).floor() % 2 == 0 ? 1 : -1));
+      path.lineTo(
+          x,
+          size.height * 0.25 +
+              waveHeight * ((x / waveLength).floor() % 2 == 0 ? 1 : -1));
     }
-
 
     path.lineTo(size.width, size.height);
     path.lineTo(0, size.height);

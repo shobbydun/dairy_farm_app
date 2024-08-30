@@ -1,4 +1,6 @@
+import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AddWagePage extends StatefulWidget {
   @override
@@ -12,6 +14,36 @@ class _AddWagePageState extends State<AddWagePage> {
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _wageController = TextEditingController();
 
+  Future<void> _addWage() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final firestoreServices = FirestoreServices(user.uid);
+      try {
+        await firestoreServices.addWage(
+          _nameController.text,
+          _departmentController.text,
+          _dateController.text,
+          _wageController.text,
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Wage record added'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error adding wage record: $e',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,18 +90,11 @@ class _AddWagePageState extends State<AddWagePage> {
               const SizedBox(height: 16),
 
               // Date Field
-              _buildTextField(
+              _buildDatePickerField(
                 controller: _dateController,
                 labelText: 'Date',
-                hintText: 'YYYY-MM-DD',
+                hintText: 'Select date',
                 icon: Icons.calendar_today,
-                keyboardType: TextInputType.datetime,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter the date';
-                  }
-                  return null;
-                },
               ),
               const SizedBox(height: 16),
 
@@ -93,11 +118,7 @@ class _AddWagePageState extends State<AddWagePage> {
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState?.validate() ?? false) {
-                    // Handle form submission
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Wage record added')),
-                    );
-                    Navigator.pop(context); // Go back to the previous screen
+                    _addWage();
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -143,6 +164,41 @@ class _AddWagePageState extends State<AddWagePage> {
       ),
       keyboardType: keyboardType,
       validator: validator,
+    );
+  }
+
+  Widget _buildDatePickerField({
+    required TextEditingController controller,
+    required String labelText,
+    required String hintText,
+    required IconData icon,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: labelText,
+        hintText: hintText,
+        prefixIcon: Icon(icon, color: Colors.blueAccent),
+        filled: true,
+        fillColor: Colors.blueGrey[50],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
+      readOnly: true,
+      onTap: () async {
+        DateTime? pickedDate = await showDatePicker(
+          context: context,
+          initialDate: DateTime.now(),
+          firstDate: DateTime(2000),
+          lastDate: DateTime(2101),
+        );
+        if (pickedDate != null) {
+          controller.text = "${pickedDate.toLocal()}".split(' ')[0];
+        }
+      },
     );
   }
 }

@@ -53,7 +53,7 @@
             <key>CFBundleURLSchemes</key>
             <array>
                 <!-- Replace with your reversed client ID from GoogleService-Info.plist -->
-                <string>com.example.dairy_harbor</string>
+                <string>com.yourcompany.yourapp</string>
             </array>
         </dict>
     </array>
@@ -63,9 +63,12 @@
     <string>This app requires access to the camera to take pictures of the cattle.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>This app requires access to your photo library to upload and select photos of the cattle.</string>
-    <key>NSAppleMusicUsageDescription</key>
-    <string>This app uses Apple Music to provide personalized music recommendations.</string>
-    <key>NSFaceIDUsageDescription</key>
-    <string>This app uses Face ID for authentication.</string>
+
+    <!-- Ensure internet access is allowed -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
 </dict>
 </plist>

@@ -1,21 +1,57 @@
+import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class MedicineDetailPage extends StatelessWidget {
-  final String medicineId; // ID or some identifier to fetch medicine details
+class MedicineDetailPage extends StatefulWidget {
+  final String medicineId;
 
   const MedicineDetailPage({super.key, required this.medicineId});
 
   @override
+  _MedicineDetailPageState createState() => _MedicineDetailPageState();
+}
+
+class _MedicineDetailPageState extends State<MedicineDetailPage> {
+  late FirestoreServices _firestoreServices;
+  Map<String, dynamic>? _medicine;
+
+  @override
+  void initState() {
+    super.initState();
+    _firestoreServices = FirestoreServices(FirebaseAuth.instance.currentUser!.uid);
+    _fetchMedicineDetails();
+  }
+
+  Future<void> _fetchMedicineDetails() async {
+    try {
+      final medicines = await _firestoreServices.getMedicines();
+      final medicine = medicines.firstWhere((med) => med['id'] == widget.medicineId);
+      setState(() {
+        _medicine = medicine;
+      });
+    } catch (e) {
+      print('Error fetching medicine details: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // medicine details using medicineId
-   
-    final String name = 'Sample Medicine';
-    final String quantity = '10 tablets';
-    final String expiryDate = '2025-12-01';
-    final String supplier = 'Sample Supplier';
+    if (_medicine == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Medicine Details'),
+          backgroundColor: Colors.blueAccent,
+        ),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final name = _medicine!['name'];
+    final quantity = _medicine!['quantity'];
+    final expiryDate = _medicine!['expiryDate'];
+    final supplier = _medicine!['supplier'];
 
     return Scaffold(
-
       appBar: AppBar(
         title: Text('Medicine Details'),
         backgroundColor: Colors.blueAccent,
@@ -25,7 +61,6 @@ class MedicineDetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Card for Medicine Details
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(
@@ -45,7 +80,6 @@ class MedicineDetailPage extends StatelessWidget {
               ),
             ),
             SizedBox(height: 20),
-            // Back Button
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);

@@ -1,4 +1,7 @@
+import 'package:dairy_harbor/services_functions/firestore_services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class AddMedicinePage extends StatefulWidget {
   @override
@@ -11,6 +14,54 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
   final _quantityController = TextEditingController();
   final _expiryDateController = TextEditingController();
   final _supplierController = TextEditingController();
+
+  late FirestoreServices _firestoreServices;
+
+  @override
+  void initState() {
+    super.initState();
+    _firestoreServices = FirestoreServices(FirebaseAuth.instance.currentUser!.uid);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _quantityController.dispose();
+    _expiryDateController.dispose();
+    _supplierController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addMedicine() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        await _firestoreServices.addMedicine(
+          _nameController.text,
+          _quantityController.text,
+          _expiryDateController.text,
+          _supplierController.text,
+        );
+        Navigator.pop(context);
+      } catch (e) {
+        print('Error adding medicine: $e');
+      }
+    }
+  }
+
+  Future<void> _selectExpiryDate() async {
+    final DateTime? selectedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime(2100),
+    );
+
+    if (selectedDate != null) {
+      setState(() {
+        _expiryDateController.text = DateFormat('yyyy-MM-dd').format(selectedDate);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +77,6 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Medicine Name
               _buildTextField(
                 controller: _nameController,
                 labelText: 'Name',
@@ -40,8 +90,6 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
                 },
               ),
               const SizedBox(height: 16),
-              
-              // Quantity
               _buildTextField(
                 controller: _quantityController,
                 labelText: 'Quantity',
@@ -56,24 +104,25 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
                 },
               ),
               const SizedBox(height: 16),
-
-              // Expiry Date
-              _buildTextField(
-                controller: _expiryDateController,
-                labelText: 'Expiry Date',
-                hintText: 'YYYY-MM-DD',
-                icon: Icons.calendar_today,
-                keyboardType: TextInputType.datetime,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter the expiry date';
-                  }
-                  return null;
-                },
+              GestureDetector(
+                onTap: _selectExpiryDate,
+                child: AbsorbPointer(
+                  child: _buildTextField(
+                    controller: _expiryDateController,
+                    labelText: 'Expiry Date',
+                    hintText: 'YYYY-MM-DD',
+                    icon: Icons.calendar_today,
+                    keyboardType: TextInputType.datetime,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter the expiry date';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
-
-              // Supplier
               _buildTextField(
                 controller: _supplierController,
                 labelText: 'Supplier',
@@ -87,24 +136,8 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
                 },
               ),
               const SizedBox(height: 24),
-
-              // Submit Button
               ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    // Handle form submission
-                    final name = _nameController.text;
-                    final quantity = _quantityController.text;
-                    final expiryDate = _expiryDateController.text;
-                    final supplier = _supplierController.text;
-
-                    // Process the data (e.g., add to inventory, save to database)
-
-
-                    // Close the form and return to the previous screen
-                    Navigator.pop(context);
-                  }
-                },
+                onPressed: _addMedicine,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueAccent,
                   shape: RoundedRectangleBorder(
