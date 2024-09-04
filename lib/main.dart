@@ -40,9 +40,13 @@ import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    print("Firebase initialization error: $e");
+  }
 
   runApp(
     MultiProvider(
@@ -66,7 +70,6 @@ void main() async {
   );
 }
 
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -85,7 +88,6 @@ class MyApp extends StatelessWidget {
                 args['firestoreServices'] as FirestoreServices?;
             if (firestoreServices == null) {
               print("Error: FirestoreServices argument is missing or invalid.");
-              
               return MaterialPageRoute(
                   builder: (context) => AuthPage());
             }

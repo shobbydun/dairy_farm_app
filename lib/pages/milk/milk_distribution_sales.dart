@@ -1,8 +1,22 @@
+import 'package:dairy_harbor/components/widgets/add_sale_form.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
-class MilkDistributionSales extends StatelessWidget {
+class MilkDistributionSales extends StatefulWidget {
   const MilkDistributionSales({super.key});
+
+  @override
+  _MilkDistributionSalesState createState() => _MilkDistributionSalesState();
+}
+
+class _MilkDistributionSalesState extends State<MilkDistributionSales> {
+  List<Sale> _sales = [];
+
+  void _addSale(Sale sale) {
+    setState(() {
+      _sales.add(sale);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -139,10 +153,11 @@ class MilkDistributionSales extends StatelessWidget {
 
             // Sales List
             ListView.builder(
-              itemCount: 10,
+              itemCount: _sales.length,
               shrinkWrap: true, // Important to make the ListView fit inside the column
               physics: NeverScrollableScrollPhysics(), // Prevents nested scrolling conflicts
               itemBuilder: (context, index) {
+                final sale = _sales[index];
                 return Container(
                   margin: const EdgeInsets.symmetric(vertical: 4.0),
                   decoration: BoxDecoration(
@@ -158,9 +173,15 @@ class MilkDistributionSales extends StatelessWidget {
                   ),
                   child: ListTile(
                     contentPadding: const EdgeInsets.all(16.0),
-                    title: Text('Sale $index', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Details of sale #$index'),
-                    trailing: Text('Kshs${(index + 1) * 50}', style: TextStyle(color: Colors.blue)),
+                    title: Text(
+                      'Sale ${index + 1}',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text('Milk Distributed: ${sale.milkDistributed} liters'),
+                    trailing: Text(
+                      'Kshs${sale.saleAmount}',
+                      style: TextStyle(color: Colors.blue),
+                    ),
                     onTap: () {
                       // Handle tile tap
                     },
@@ -173,7 +194,10 @@ class MilkDistributionSales extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Implement add sale functionality here
+          showDialog(
+            context: context,
+            builder: (context) => AddSaleForm(onSave: _addSale),
+          );
         },
         child: const Icon(Icons.add),
         tooltip: 'Add Sale',
@@ -240,4 +264,11 @@ class MilkDistributionSales extends StatelessWidget {
       ),
     );
   }
+}
+
+class Sale {
+  final double saleAmount;
+  final double milkDistributed;
+
+  Sale({required this.saleAmount, required this.milkDistributed});
 }

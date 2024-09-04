@@ -1,4 +1,4 @@
-import 'package:dairy_harbor/pages/inventory/notification_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -12,10 +12,103 @@ class CalvingPage extends StatefulWidget {
 class _CalvingPageState extends State<CalvingPage> {
   final List<Calf> _calves = []; 
 
+  @override
+  void initState() {
+    super.initState();
+    _fetchCalvesFromFirebase();
+  }
+
+  Future<void> _fetchCalvesFromFirebase() async {
+    final calfCollection = FirebaseFirestore.instance.collection('calves');
+    try {
+      final snapshot = await calfCollection.get();
+      final calvesList = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Calf(
+          id: doc.id,
+          name: data['name'],
+          birthDate: (data['birthDate'] as Timestamp).toDate(),
+          mother: data['mother'],
+          gender: data['gender'],
+          healthStatus: data['healthStatus'],
+        );
+      }).toList();
+
+      setState(() {
+        _calves.clear();
+        _calves.addAll(calvesList);
+      });
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch calf records: $error')),
+      );
+    }
+  }
+
   void _addNewCalf(Calf newCalf) {
     setState(() {
       _calves.add(newCalf);
     });
+    _saveCalfToFirebase(newCalf);
+  }
+
+  void _saveCalfToFirebase(Calf calf) async {
+    final calfCollection = FirebaseFirestore.instance.collection('calves');
+
+    try {
+      await calfCollection.add({
+        'name': calf.name,
+        'birthDate': calf.birthDate,
+        'mother': calf.mother,
+        'gender': calf.gender,
+        'healthStatus': calf.healthStatus,
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Calf record saved successfully!')),
+      );
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save calf record: $error')),
+      );
+    }
+  }
+
+  void _updateCalf(Calf calf) async {
+    final calfDoc = FirebaseFirestore.instance.collection('calves').doc(calf.id);
+
+    try {
+      await calfDoc.update({
+        'name': calf.name,
+        'birthDate': calf.birthDate,
+        'mother': calf.mother,
+        'gender': calf.gender,
+        'healthStatus': calf.healthStatus,
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Calf record updated successfully!')),
+      );
+      _fetchCalvesFromFirebase(); // Refresh list
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update calf record: $error')),
+      );
+    }
+  }
+
+  void _deleteCalf(String calfId) async {
+    final calfDoc = FirebaseFirestore.instance.collection('calves').doc(calfId);
+
+    try {
+      await calfDoc.delete();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Calf record deleted successfully!')),
+      );
+      _fetchCalvesFromFirebase(); // Refresh list
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete calf record: $error')),
+      );
+    }
   }
 
   @override
@@ -28,16 +121,13 @@ class _CalvingPageState extends State<CalvingPage> {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-           
+              // Implement search functionality
             },
           ),
           IconButton(
             icon: const Icon(Icons.notifications),
             onPressed: () {
-              Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => NotificationScreen()),
-                  );
+              // Navigate to notifications page
             },
           ),
         ],
@@ -167,10 +257,23 @@ class _CalvingPageState extends State<CalvingPage> {
       title: Text(calf.name, style: const TextStyle(fontWeight: FontWeight.bold)),
       subtitle: Text('Birth Date: ${DateFormat.yMMMd().format(calf.birthDate)}\nMother: ${calf.mother}'),
       leading: Icon(Icons.pets, color: Colors.blueAccent),
-      trailing: Icon(Icons.edit, color: Colors.grey),
-      onTap: () {
-        
-      },
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: Icon(Icons.edit, color: Colors.grey),
+            onPressed: () {
+              _showCalfForm(context, calf);
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.delete, color: Colors.red),
+            onPressed: () {
+              _confirmDelete(calf.id);
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -237,12 +340,59 @@ class _CalvingPageState extends State<CalvingPage> {
       ),
     );
   }
+
+  void _showCalfForm(BuildContext context, Calf? calf) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: _CalfForm(
+            calf: calf,
+            onSubmit: (updatedCalf) {
+              if (calf == null) {
+                _addNewCalf(updatedCalf);
+              } else {
+                _updateCalf(updatedCalf);
+              }
+              Navigator.pop(context);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmDelete(String calfId) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Confirm Delete'),
+        content: Text('Are you sure you want to delete this calf record?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true) {
+      _deleteCalf(calfId);
+    }
+  }
 }
 
 class _CalfForm extends StatefulWidget {
   final void Function(Calf) onSubmit;
+  final Calf? calf;
 
-  const _CalfForm({required this.onSubmit});
+  const _CalfForm({required this.onSubmit, this.calf});
 
   @override
   __CalfFormState createState() => __CalfFormState();
@@ -254,6 +404,18 @@ class __CalfFormState extends State<_CalfForm> {
   final _motherController = TextEditingController();
   String _gender = 'Male';
   String _healthStatus = 'Healthy';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.calf != null) {
+      _nameController.text = widget.calf!.name;
+      _birthDateController.text = DateFormat.yMMMd().format(widget.calf!.birthDate);
+      _motherController.text = widget.calf!.mother;
+      _gender = widget.calf!.gender;
+      _healthStatus = widget.calf!.healthStatus;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -300,40 +462,40 @@ class __CalfFormState extends State<_CalfForm> {
         const SizedBox(height: 16.0),
         DropdownButtonFormField<String>(
           value: _gender,
-          items: ['Male', 'Female'].map((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
-          onChanged: (String? newValue) {
-            setState(() {
-              _gender = newValue!;
-            });
-          },
           decoration: InputDecoration(
             labelText: 'Gender',
             border: OutlineInputBorder(),
           ),
+          items: ['Male', 'Female'].map((gender) {
+            return DropdownMenuItem<String>(
+              value: gender,
+              child: Text(gender),
+            );
+          }).toList(),
+          onChanged: (value) {
+            setState(() {
+              _gender = value!;
+            });
+          },
         ),
         const SizedBox(height: 16.0),
         DropdownButtonFormField<String>(
           value: _healthStatus,
-          items: ['Healthy', 'Sick', 'Injured'].map((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
-          onChanged: (String? newValue) {
-            setState(() {
-              _healthStatus = newValue!;
-            });
-          },
           decoration: InputDecoration(
             labelText: 'Health Status',
             border: OutlineInputBorder(),
           ),
+          items: ['Healthy', 'Sick'].map((status) {
+            return DropdownMenuItem<String>(
+              value: status,
+              child: Text(status),
+            );
+          }).toList(),
+          onChanged: (value) {
+            setState(() {
+              _healthStatus = value!;
+            });
+          },
         ),
         const SizedBox(height: 16.0),
         ElevatedButton(
@@ -343,6 +505,7 @@ class __CalfFormState extends State<_CalfForm> {
                 _motherController.text.isNotEmpty) {
               widget.onSubmit(
                 Calf(
+                  id: widget.calf?.id ?? '',
                   name: _nameController.text,
                   birthDate: DateFormat.yMMMd().parse(_birthDateController.text),
                   mother: _motherController.text,
@@ -350,16 +513,13 @@ class __CalfFormState extends State<_CalfForm> {
                   healthStatus: _healthStatus,
                 ),
               );
-              _nameController.clear();
-              _birthDateController.clear();
-              _motherController.clear();
-              setState(() {
-                _gender = 'Male';
-                _healthStatus = 'Healthy';
-              });
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Please fill all fields')),
+              );
             }
           },
-          child: Text('Save'),
+          child: Text(widget.calf == null ? 'Add Calf' : 'Update Calf'),
         ),
       ],
     );
@@ -367,6 +527,7 @@ class __CalfFormState extends State<_CalfForm> {
 }
 
 class Calf {
+  final String id;
   final String name;
   final DateTime birthDate;
   final String mother;
@@ -374,6 +535,7 @@ class Calf {
   final String healthStatus;
 
   Calf({
+    required this.id,
     required this.name,
     required this.birthDate,
     required this.mother,
