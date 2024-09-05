@@ -28,7 +28,7 @@ class _EditMachineryPageState extends State<EditMachineryPage> {
   late TextEditingController _conditionController;
   late TextEditingController _dateController;
 
-  String _selectedType = 'Agricultural'; // Default value for dropdown
+  String _selectedType = 'Agricultural'; 
 
   late FirestoreServices _firestoreServices;
 

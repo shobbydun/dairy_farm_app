@@ -131,13 +131,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
                       });
                     },
                     children: [
-                      _buildSubMenuItem(
-                        text: 'Cattle Profile',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.pushNamed(context, '/cattleProfile');
-                        },
-                      ),
+                    
                       _buildSubMenuItem(
                         text: 'Cattle List Page',
                         onTap: () {

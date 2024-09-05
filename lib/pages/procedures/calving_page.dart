@@ -10,7 +10,7 @@ class CalvingPage extends StatefulWidget {
 }
 
 class _CalvingPageState extends State<CalvingPage> {
-  final List<Calf> _calves = []; 
+  final List<Calf> _calves = [];
 
   @override
   void initState() {
@@ -74,7 +74,8 @@ class _CalvingPageState extends State<CalvingPage> {
   }
 
   void _updateCalf(Calf calf) async {
-    final calfDoc = FirebaseFirestore.instance.collection('calves').doc(calf.id);
+    final calfDoc =
+        FirebaseFirestore.instance.collection('calves').doc(calf.id);
 
     try {
       await calfDoc.update({
@@ -117,20 +118,6 @@ class _CalvingPageState extends State<CalvingPage> {
       appBar: AppBar(
         title: const Text('Calving Management'),
         backgroundColor: Colors.blueAccent,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              // Implement search functionality
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              // Navigate to notifications page
-            },
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -153,7 +140,9 @@ class _CalvingPageState extends State<CalvingPage> {
 
   Widget _buildDashboard() {
     int totalCalves = _calves.length;
-    int recentCalvings = _calves.where((calf) => DateTime.now().difference(calf.birthDate).inDays <= 30).length;
+    int recentCalvings = _calves
+        .where((calf) => DateTime.now().difference(calf.birthDate).inDays <= 30)
+        .length;
 
     return Card(
       color: Colors.greenAccent[50],
@@ -203,12 +192,14 @@ class _CalvingPageState extends State<CalvingPage> {
               const SizedBox(height: 8.0),
               Text(
                 title,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 4.0),
               Text(
                 '$value',
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -254,8 +245,10 @@ class _CalvingPageState extends State<CalvingPage> {
   Widget _buildCalfRecordTile(Calf calf) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
-      title: Text(calf.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text('Birth Date: ${DateFormat.yMMMd().format(calf.birthDate)}\nMother: ${calf.mother}'),
+      title:
+          Text(calf.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+      subtitle: Text(
+          'Birth Date: ${DateFormat.yMMMd().format(calf.birthDate)}\nMother: ${calf.mother}'),
       leading: Icon(Icons.pets, color: Colors.blueAccent),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -329,7 +322,7 @@ class _CalvingPageState extends State<CalvingPage> {
             ),
             const SizedBox(height: 16.0),
             Text(
-              'For assistance, contact our support team at support@dairyfarmapp.com',
+              'For assistance, contact our support team at shobbyduncan@gmail.com',
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.black,
@@ -410,7 +403,8 @@ class __CalfFormState extends State<_CalfForm> {
     super.initState();
     if (widget.calf != null) {
       _nameController.text = widget.calf!.name;
-      _birthDateController.text = DateFormat.yMMMd().format(widget.calf!.birthDate);
+      _birthDateController.text =
+          DateFormat.yMMMd().format(widget.calf!.birthDate);
       _motherController.text = widget.calf!.mother;
       _gender = widget.calf!.gender;
       _healthStatus = widget.calf!.healthStatus;
@@ -446,7 +440,8 @@ class __CalfFormState extends State<_CalfForm> {
             );
             if (pickedDate != null) {
               setState(() {
-                _birthDateController.text = DateFormat.yMMMd().format(pickedDate);
+                _birthDateController.text =
+                    DateFormat.yMMMd().format(pickedDate);
               });
             }
           },
@@ -507,7 +502,8 @@ class __CalfFormState extends State<_CalfForm> {
                 Calf(
                   id: widget.calf?.id ?? '',
                   name: _nameController.text,
-                  birthDate: DateFormat.yMMMd().parse(_birthDateController.text),
+                  birthDate:
+                      DateFormat.yMMMd().parse(_birthDateController.text),
                   mother: _motherController.text,
                   gender: _gender,
                   healthStatus: _healthStatus,

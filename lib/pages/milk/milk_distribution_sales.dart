@@ -154,8 +154,8 @@ class _MilkDistributionSalesState extends State<MilkDistributionSales> {
             // Sales List
             ListView.builder(
               itemCount: _sales.length,
-              shrinkWrap: true, // Important to make the ListView fit inside the column
-              physics: NeverScrollableScrollPhysics(), // Prevents nested scrolling conflicts
+              shrinkWrap: true, 
+              physics: NeverScrollableScrollPhysics(),
               itemBuilder: (context, index) {
                 final sale = _sales[index];
                 return Container(
@@ -236,7 +236,6 @@ class _MilkDistributionSalesState extends State<MilkDistributionSales> {
       lastDate: DateTime(2101),
     );
     if (startDate != null && endDate != null && startDate.isBefore(endDate)) {
-      // Handle the selected date range
     }
   }
 
@@ -256,7 +255,6 @@ class _MilkDistributionSalesState extends State<MilkDistributionSales> {
           TextButton(
             child: const Text('Download'),
             onPressed: () {
-              // Implement download functionality here
               Navigator.of(context).pop();
             },
           ),

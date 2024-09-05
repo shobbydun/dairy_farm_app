@@ -249,7 +249,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
         });
       }
     } catch (e) {
-      // Handle errors if needed
     }
   }
 
@@ -303,7 +302,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ElevatedButton(
                 onPressed: _isSaving ? null : () async {
                   setState(() {
-                    _isSaving = true; // Start saving
+                    _isSaving = true; 
                   });
 
                   try {

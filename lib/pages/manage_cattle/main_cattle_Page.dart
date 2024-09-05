@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:dairy_harbor/pages/manage_cattle/cattle_list_page.dart';
-import 'cattle_form.dart'; 
+import 'cattle_form.dart';
+import 'cattle_list_page.dart';
 
 class CattlePage extends StatefulWidget {
   const CattlePage({super.key});
@@ -40,8 +40,7 @@ class _CattlePageState extends State<CattlePage> {
               ),
             ),
             const SizedBox(height: 10),
-            if (_showForm)
-              CattleForm(), 
+            if (_showForm) CattleForm(),
             const SizedBox(height: 20),
             SizedBox(
               height: 300,

@@ -88,8 +88,7 @@ class MyApp extends StatelessWidget {
                 args['firestoreServices'] as FirestoreServices?;
             if (firestoreServices == null) {
               print("Error: FirestoreServices argument is missing or invalid.");
-              return MaterialPageRoute(
-                  builder: (context) => AuthPage());
+              return MaterialPageRoute(builder: (context) => AuthPage());
             }
             return MaterialPageRoute(
               builder: (context) => HomePage(
@@ -171,10 +170,17 @@ class MyApp extends StatelessWidget {
           case '/CattlePage':
             return MaterialPageRoute(builder: (context) => CattlePage());
           case '/cattleProfile':
+            final args = settings.arguments as Map<String, dynamic>?;
+            final cattleId = args?['cattleId'] as String?;
+            final index =
+                args?['index'] as int? ?? 0;
+            if (cattleId == null) {
+              return MaterialPageRoute(builder: (context) => AuthPage());
+            }
             return MaterialPageRoute(
-                builder: (context) => CattleProfile(
-                      index: 0,
-                    ));
+              builder: (context) =>
+                  CattleProfilePage(cattleId: cattleId, index: index),
+            );
           case '/cattleListPage':
             return MaterialPageRoute(builder: (context) => CattleList());
           case '/cattleForm':

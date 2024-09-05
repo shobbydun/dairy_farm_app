@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class DewormingPage extends StatefulWidget {
@@ -14,9 +15,33 @@ class _DewormingPageState extends State<DewormingPage> {
   final _drugUsedController = TextEditingController();
   final _notesController = TextEditingController();
 
-  List<Map<String, String>> _dewormingList = [];
+  final CollectionReference _dewormingCollection =
+      FirebaseFirestore.instance.collection('deworming');
 
-  void _submitForm() {
+  List<DocumentSnapshot> _dewormingList = [];
+  bool _isFormVisible = false;
+  String? _editingDocId;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDewormingRecords();
+  }
+
+  Future<void> _fetchDewormingRecords() async {
+    try {
+      final snapshot = await _dewormingCollection.get();
+      setState(() {
+        _dewormingList = snapshot.docs;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load records: $e')),
+      );
+    }
+  }
+
+  Future<void> _submitForm() async {
     final dateOfDeworming = _dateOfDewormingController.text;
     final cattleId = _cattleIdController.text;
     final vetName = _vetNameController.text;
@@ -37,19 +62,50 @@ class _DewormingPageState extends State<DewormingPage> {
       return;
     }
 
-    setState(() {
-      _dewormingList.add({
-        'date': dateOfDeworming,
-        'cattleId': cattleId,
-        'vetName': vetName,
-        'method': method,
-        'disease': disease,
-        'drugUsed': drugUsed,
-        'notes': notes,
-      });
-    });
+    try {
+      if (_editingDocId == null) {
+        // Add new record
+        await _dewormingCollection.add({
+          'date': dateOfDeworming,
+          'cattleId': cattleId,
+          'vetName': vetName,
+          'method': method,
+          'disease': disease,
+          'drugUsed': drugUsed,
+          'notes': notes,
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Data saved successfully')),
+        );
+      } else {
+        // Update existing record
+        await _dewormingCollection.doc(_editingDocId).update({
+          'date': dateOfDeworming,
+          'cattleId': cattleId,
+          'vetName': vetName,
+          'method': method,
+          'disease': disease,
+          'drugUsed': drugUsed,
+          'notes': notes,
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Data updated successfully')),
+        );
+        setState(() {
+          _editingDocId = null;
+        });
+      }
 
-    _clearForm();
+      _fetchDewormingRecords(); // Refresh the list
+      _clearForm();
+      setState(() {
+        _isFormVisible = false; // Hide the form
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save data: $e')),
+      );
+    }
   }
 
   void _clearForm() {
@@ -60,6 +116,34 @@ class _DewormingPageState extends State<DewormingPage> {
     _diseaseController.clear();
     _drugUsedController.clear();
     _notesController.clear();
+  }
+
+  void _editRecord(DocumentSnapshot doc) {
+    setState(() {
+      _editingDocId = doc.id;
+      _cattleIdController.text = doc['cattleId'];
+      _dateOfDewormingController.text = doc['date'];
+      _vetNameController.text = doc['vetName'];
+      _methodController.text = doc['method'];
+      _diseaseController.text = doc['disease'];
+      _drugUsedController.text = doc['drugUsed'];
+      _notesController.text = doc['notes'];
+      _isFormVisible = true;
+    });
+  }
+
+  void _deleteRecord(String docId) async {
+    try {
+      await _dewormingCollection.doc(docId).delete();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Record deleted successfully')),
+      );
+      _fetchDewormingRecords(); // Refresh the list
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete record: $e')),
+      );
+    }
   }
 
   @override
@@ -73,7 +157,6 @@ class _DewormingPageState extends State<DewormingPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            flex: 1,
             child: SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -81,15 +164,28 @@ class _DewormingPageState extends State<DewormingPage> {
                   children: [
                     _buildHeaderCard(),
                     const SizedBox(height: 16.0),
-                    _buildDewormingForm(),
+                    if (_isFormVisible) _buildDewormingForm(),
                     const SizedBox(height: 16.0),
+                    _buildDewormingList(),
                   ],
                 ),
               ),
             ),
           ),
-      
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          setState(() {
+            _isFormVisible = !_isFormVisible; // Toggle form visibility
+            if (_isFormVisible) {
+              _clearForm();
+              _editingDocId = null;
+            }
+          });
+        },
+        backgroundColor: Colors.lightBlueAccent,
+        child: Icon(_isFormVisible ? Icons.close : Icons.add),
       ),
     );
   }
@@ -198,7 +294,7 @@ class _DewormingPageState extends State<DewormingPage> {
             const SizedBox(height: 16.0),
             ElevatedButton(
               onPressed: _submitForm,
-              child: Text('Submit'),
+              child: Text(_editingDocId == null ? 'Submit' : 'Update'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.lightBlueAccent,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -242,9 +338,15 @@ class _DewormingPageState extends State<DewormingPage> {
       padding: const EdgeInsets.only(bottom: 16.0),
       child: DropdownButtonFormField<String>(
         value: controller.text.isEmpty ? null : controller.text,
+        onChanged: (String? newValue) {
+          setState(() {
+            controller.text = newValue!;
+          });
+        },
         decoration: InputDecoration(
           labelText: labelText,
           border: OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
         items: items.map((item) {
           return DropdownMenuItem<String>(
@@ -252,47 +354,78 @@ class _DewormingPageState extends State<DewormingPage> {
             child: Text(item),
           );
         }).toList(),
-        onChanged: (value) {
-          setState(() {
-            controller.text = value!;
-          });
-        },
       ),
     );
   }
 
   Widget _buildDewormingList() {
-    
-    return ListView.builder(
-      itemCount: _dewormingList.length,
-      itemBuilder: (context, index) {
-        final item = _dewormingList[index];
-        return Card(
-          margin: EdgeInsets.symmetric(vertical: 8.0),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: ListTile(
-            title: Text('${item['date']} - ${item['cattleId']}'),
-            subtitle: Text(
-              'Vet: ${item['vetName']}\n'
-              'Method: ${item['method']}\n'
-              'Disease: ${item['disease']}\n'
-              'Drug: ${item['drugUsed']}\n'
-              'Notes: ${item['notes']}',
-              style: TextStyle(color: Colors.black54),
+    return Card(
+      elevation: 6.0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Deworming List',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            trailing: IconButton(
-              icon: Icon(Icons.delete, color: Colors.red),
-              onPressed: () {
-                setState(() {
-                  _dewormingList.removeAt(index);
-                });
-              },
-            ),
-          ),
-        );
-      },
+            const SizedBox(height: 16.0),
+            _dewormingList.isNotEmpty
+                ? Column(
+                    children: _dewormingList.map((doc) {
+                      final date = doc['date'] ?? '';
+                      final cattleId = doc['cattleId'] ?? '';
+                      final vetName = doc['vetName'] ?? '';
+                      final method = doc['method'] ?? '';
+                      final disease = doc['disease'] ?? '';
+                      final drugUsed = doc['drugUsed'] ?? '';
+                      final notes = doc['notes'] ?? '';
+
+                      return Card(
+                        elevation: 4.0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        margin: const EdgeInsets.only(bottom: 8.0),
+                        child: ListTile(
+                          contentPadding: EdgeInsets.all(16.0),
+                          title: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Date: $date', style: TextStyle(fontWeight: FontWeight.bold)),
+                              Text('Cattle ID: $cattleId'),
+                              Text('Veterinary Doctor: $vetName'),
+                              Text('Method: $method'),
+                              Text('Disease: $disease'),
+                              Text('Drug Used: $drugUsed'),
+                              Text('Notes: $notes'),
+                            ],
+                          ),
+                          trailing: Wrap(
+                            spacing: 12,
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () => _editRecord(doc),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _deleteRecord(doc.id),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  )
+                : Text('No deworming records found.'),
+          ],
+        ),
+      ),
     );
   }
 }
-
-

@@ -52,7 +52,6 @@ class _ArtificialInseminationPageState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Add your image and text here
               Container(
                 padding: const EdgeInsets.all(16.0),
                 decoration: BoxDecoration(

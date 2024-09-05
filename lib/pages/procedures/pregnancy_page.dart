@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class PregnancyPage extends StatefulWidget {
@@ -6,7 +7,12 @@ class PregnancyPage extends StatefulWidget {
 }
 
 class _PregnancyPageState extends State<PregnancyPage> {
+  final TextEditingController _cattleIdController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _costController = TextEditingController();
+  DateTime? _dateOfDetection;
   DateTime? _expectedDateOfBirth;
+  String? _editDocId;
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +27,7 @@ class _PregnancyPageState extends State<PregnancyPage> {
           child: Column(
             children: [
               _buildPregnancyCard(context),
+              const SizedBox(height: 16.0), 
               _buildPregnancyListSection(),
             ],
           ),
@@ -102,7 +109,6 @@ class _PregnancyPageState extends State<PregnancyPage> {
     );
   }
 
-  // Method to build Pregnancy List Section
   Widget _buildPregnancyListSection() {
     return Card(
       color: Colors.white,
@@ -125,34 +131,30 @@ class _PregnancyPageState extends State<PregnancyPage> {
               ),
             ),
             const SizedBox(height: 8.0),
-            Table(
-              columnWidths: {
-                0: FlexColumnWidth(),
-                1: FlexColumnWidth(),
-                2: FlexColumnWidth(),
-                3: FixedColumnWidth(64.0),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('pregnancy_records').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(child: Text('No Records Found'));
+                }
+
+                return SizedBox(
+                  height: 400, 
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: snapshot.data!.docs.length,
+                    itemBuilder: (context, index) {
+                      final doc = snapshot.data!.docs[index];
+                      final data = doc.data() as Map<String, dynamic>;
+                      final cattleId = data['cattle_id'] ?? 'N/A';
+                      final dateOfDetection = (data['date_of_detection'] as Timestamp).toDate();
+                      final expectedDateOfBirth = (data['expected_date_of_birth'] as Timestamp).toDate();
+
+                      return _buildRecordCard(doc.id, cattleId, dateOfDetection, expectedDateOfBirth, data);
+                    },
+                  ),
+                );
               },
-              children: [
-                TableRow(
-                  children: [
-                    _tableHeaderCell('Cattle ID'),
-                    _tableHeaderCell('Date of Conceiving'),
-                    _tableHeaderCell('Expected Date of Birth'),
-                    _tableHeaderCell('Actions'),
-                  ],
-                ),
-                TableRow(
-                  children: [
-                    _tableCell('001'),
-                    _tableCell('2024-01-15'),
-                    _tableCell('2024-10-15'),
-                    IconButton(
-                      onPressed: () {},
-                      icon: Icon(Icons.delete, color: Colors.red),
-                    ),
-                  ],
-                ),
-              ],
             ),
           ],
         ),
@@ -160,40 +162,95 @@ class _PregnancyPageState extends State<PregnancyPage> {
     );
   }
 
-  Widget _tableHeaderCell(String title) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: Colors.lightBlueAccent,
+  Widget _buildRecordCard(String docId, String cattleId, DateTime dateOfDetection, DateTime expectedDateOfBirth, Map<String, dynamic> data) {
+    return Card(
+      color: Colors.white,
+      elevation: 4.0,
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16.0),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Cattle ID: $cattleId',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 4.0),
+            Text('Date of Conceiving: ${dateOfDetection.toLocal().toString().split(' ')[0]}'),
+            SizedBox(height: 4.0),
+            Text('Expected Date of Birth: ${expectedDateOfBirth.toLocal().toString().split(' ')[0]}'),
+            SizedBox(height: 4.0),
+            Text('Notes: ${data['notes'] ?? 'N/A'}'),
+            SizedBox(height: 4.0),
+            Text('Cost: ${data['cost'] ?? 'N/A'}'),
+          ],
+        ),
+        trailing: PopupMenuButton<String>(
+          icon: Icon(Icons.more_vert, color: Colors.grey),
+          onSelected: (value) {
+            if (value == 'edit') {
+              _showPregnancyModal(context, docId, data);
+            } else if (value == 'delete') {
+              _confirmDelete(docId);
+            }
+          },
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              value: 'edit',
+              child: Text('Edit'),
+            ),
+            PopupMenuItem(
+              value: 'delete',
+              child: Text('Delete'),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _tableCell(String content) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Text(content),
-    );
-  }
+  void _showPregnancyModal(BuildContext context, [String? docId, Map<String, dynamic>? data]) {
+    if (data != null) {
+      _cattleIdController.text = data['cattle_id'] ?? '';
+      _dateOfDetection = (data['date_of_detection'] as Timestamp).toDate();
+      _expectedDateOfBirth = (data['expected_date_of_birth'] as Timestamp).toDate();
+      _notesController.text = data['notes'] ?? '';
+      _costController.text = data['cost'] ?? '';
+      _editDocId = docId;
+    } else {
+      _cattleIdController.clear();
+      _notesController.clear();
+      _costController.clear();
+      _dateOfDetection = null;
+      _expectedDateOfBirth = null;
+      _editDocId = null;
+    }
 
-  void _showPregnancyModal(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Add Pregnancy'),
+          title: Text(docId == null ? 'Add Pregnancy' : 'Edit Pregnancy'),
           content: SingleChildScrollView(
             child: Column(
               children: [
-                _buildTextField('Cattle ID', TextInputType.number),
-                _buildDatePickerField(context, 'Date of Detection'),
-                _buildDatePickerField(context, 'Expected Date of Birth'),
-                _buildTextField('Notes', TextInputType.text),
-                _buildTextField('Cost (if applicable)', TextInputType.number),
+                _buildTextField('Cattle ID', TextInputType.number, _cattleIdController),
+                _buildDatePickerField(context, 'Date of Detection', (date) {
+                  setState(() {
+                    _dateOfDetection = date;
+                  });
+                }),
+                _buildDatePickerField(context, 'Expected Date of Birth', (date) {
+                  setState(() {
+                    _expectedDateOfBirth = date;
+                  });
+                }),
+                _buildTextField('Notes', TextInputType.text, _notesController),
+                _buildTextField('Cost (if applicable)', TextInputType.number, _costController),
               ],
             ),
           ),
@@ -205,11 +262,34 @@ class _PregnancyPageState extends State<PregnancyPage> {
               },
             ),
             TextButton(
-              child: Text('Submit',
+              child: Text(docId == null ? 'Submit' : 'Save Changes',
                   style: TextStyle(color: Colors.lightBlueAccent)),
-              onPressed: () {
-                // Handle form submission logic here
-                Navigator.of(context).pop();
+              onPressed: () async {
+                if (_cattleIdController.text.isNotEmpty &&
+                    _dateOfDetection != null &&
+                    _expectedDateOfBirth != null) {
+                  if (docId == null) {
+                    // Add new record
+                    await FirebaseFirestore.instance.collection('pregnancy_records').add({
+                      'cattle_id': _cattleIdController.text,
+                      'date_of_detection': _dateOfDetection,
+                      'expected_date_of_birth': _expectedDateOfBirth,
+                      'notes': _notesController.text,
+                      'cost': _costController.text,
+                    });
+                  } else {
+                    // Update existing record
+                    await FirebaseFirestore.instance.collection('pregnancy_records').doc(docId).update({
+                      'cattle_id': _cattleIdController.text,
+                      'date_of_detection': _dateOfDetection,
+                      'expected_date_of_birth': _expectedDateOfBirth,
+                      'notes': _notesController.text,
+                      'cost': _costController.text,
+                    });
+                  }
+
+                  Navigator.of(context).pop();
+                }
               },
             ),
           ],
@@ -218,11 +298,12 @@ class _PregnancyPageState extends State<PregnancyPage> {
     );
   }
 
-  Widget _buildTextField(String label, TextInputType inputType) {
+  Widget _buildTextField(String label, TextInputType inputType, TextEditingController controller) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(
         keyboardType: inputType,
+        controller: controller,
         decoration: InputDecoration(
           labelText: label,
           border: OutlineInputBorder(),
@@ -231,7 +312,7 @@ class _PregnancyPageState extends State<PregnancyPage> {
     );
   }
 
-  Widget _buildDatePickerField(BuildContext context, String label) {
+  Widget _buildDatePickerField(BuildContext context, String label, Function(DateTime) onDateSelected) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(
@@ -249,19 +330,40 @@ class _PregnancyPageState extends State<PregnancyPage> {
             lastDate: DateTime(2101),
           );
           if (pickedDate != null) {
-            setState(() {
-              if (label == 'Expected Date of Birth') {
-                _expectedDateOfBirth = pickedDate;
-              }
-            });
+            onDateSelected(pickedDate);
           }
         },
         controller: TextEditingController(
-          text: _expectedDateOfBirth != null
-              ? "${_expectedDateOfBirth!.toLocal()}".split(' ')[0]
-              : '',
+          text: (label == 'Expected Date of Birth' ? _expectedDateOfBirth : _dateOfDetection)?.toLocal().toString().split(' ')[0] ?? '',
         ),
       ),
+    );
+  }
+
+  void _confirmDelete(String docId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Confirm Deletion'),
+          content: Text('Are you sure you want to delete this record?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel', style: TextStyle(color: Colors.red)),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Delete', style: TextStyle(color: Colors.lightBlueAccent)),
+              onPressed: () async {
+                await FirebaseFirestore.instance.collection('pregnancy_records').doc(docId).delete();
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }
