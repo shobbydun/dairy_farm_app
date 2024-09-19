@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -9,10 +10,51 @@ class NaturalInseminationPage extends StatefulWidget {
 
 class _NaturalInseminationPageState extends State<NaturalInseminationPage> {
   final TextEditingController _dateController = TextEditingController();
-  final TextEditingController _cattleIdController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _costController = TextEditingController();
+  String? _selectedCattleName;
   String? _selectedBreed;
+  List<String> _cattleList = [];
+
+  late final CollectionReference _inseminationCollection;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeCollection();
+    _fetchCattleNames(); // Fetching cattle names on initialization
+  }
+
+  void _initializeCollection() {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('User not logged in.')),
+      );
+      return;
+    }
+    _inseminationCollection = FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('natural_insemination');
+  }
+
+ void _fetchCattleNames() async {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) {
+    throw Exception('User not logged in');
+  }
+
+  final snapshot = await FirebaseFirestore.instance
+      .collection('cattle')
+      .where('userId', isEqualTo: uid)
+      .get();
+
+  setState(() {
+    _cattleList = snapshot.docs.map((doc) => doc.data()['name'] as String).toList();
+  });
+}
+
 
   void _selectDate(BuildContext context) async {
     DateTime? pickedDate = await showDatePicker(
@@ -30,10 +72,9 @@ class _NaturalInseminationPageState extends State<NaturalInseminationPage> {
 
   Future<void> _submitRecord() async {
     try {
-      final firestore = FirebaseFirestore.instance;
-      await firestore.collection('natural_insemination').add({
+      await _inseminationCollection.add({
         'date': _dateController.text,
-        'cattle_id': _cattleIdController.text,
+        'cattle_name': _selectedCattleName, 
         'father_breed': _selectedBreed,
         'notes': _notesController.text,
         'cost': _costController.text,
@@ -53,16 +94,16 @@ class _NaturalInseminationPageState extends State<NaturalInseminationPage> {
 
   void _resetFields() {
     _dateController.clear();
-    _cattleIdController.clear();
     _notesController.clear();
     _costController.clear();
     setState(() {
+      _selectedCattleName = null; // Reseting selected cattle
       _selectedBreed = null;
     });
   }
 
   void _showAddInseminationDialog(BuildContext context) {
-    _resetFields(); // Ensure fields are empty when opening dialog
+    _resetFields();
 
     showDialog(
       context: context,
@@ -86,10 +127,22 @@ class _NaturalInseminationPageState extends State<NaturalInseminationPage> {
                   readOnly: true,
                 ),
                 const SizedBox(height: 8),
-                TextField(
-                  controller: _cattleIdController,
-                  decoration: InputDecoration(labelText: 'Cattle ID'),
-                  keyboardType: TextInputType.number,
+                // Cattle Selection Dropdown
+                DropdownButtonFormField<String>(
+                  decoration: InputDecoration(labelText: 'Select Cattle'),
+                  value: _selectedCattleName,
+                  items: _cattleList.map((cattleName) {
+                    return DropdownMenuItem(
+                      value: cattleName,
+                      child: Text(cattleName),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedCattleName = value;
+                    });
+                  },
+                  validator: (value) => value == null ? 'Field required' : null,
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
@@ -142,7 +195,7 @@ class _NaturalInseminationPageState extends State<NaturalInseminationPage> {
 
   void _showEditInseminationDialog(BuildContext context, String docId, Map<String, dynamic> data) {
     _dateController.text = data['date'];
-    _cattleIdController.text = data['cattle_id'];
+    _selectedCattleName = data['cattle_name']; 
     _notesController.text = data['notes'];
     _costController.text = data['cost'];
     _selectedBreed = data['father_breed'];
@@ -169,10 +222,20 @@ class _NaturalInseminationPageState extends State<NaturalInseminationPage> {
                   readOnly: true,
                 ),
                 const SizedBox(height: 8),
-                TextField(
-                  controller: _cattleIdController,
-                  decoration: InputDecoration(labelText: 'Cattle ID'),
-                  keyboardType: TextInputType.number,
+                DropdownButtonFormField<String>(
+                  decoration: InputDecoration(labelText: 'Select Cattle'),
+                  value: _selectedCattleName,
+                  items: _cattleList.map((cattleName) {
+                    return DropdownMenuItem(
+                      value: cattleName,
+                      child: Text(cattleName),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedCattleName = value;
+                    });
+                  },
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
@@ -213,9 +276,9 @@ class _NaturalInseminationPageState extends State<NaturalInseminationPage> {
             ElevatedButton(
               onPressed: () async {
                 try {
-                  await FirebaseFirestore.instance.collection('natural_insemination').doc(docId).update({
+                  await _inseminationCollection.doc(docId).update({
                     'date': _dateController.text,
-                    'cattle_id': _cattleIdController.text,
+                    'cattle_name': _selectedCattleName, 
                     'father_breed': _selectedBreed,
                     'notes': _notesController.text,
                     'cost': _costController.text,
@@ -262,7 +325,7 @@ class _NaturalInseminationPageState extends State<NaturalInseminationPage> {
 
     if (confirmed == true) {
       try {
-        await FirebaseFirestore.instance.collection('natural_insemination').doc(docId).delete();
+        await _inseminationCollection.doc(docId).delete();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Record deleted successfully!')),
         );
@@ -330,7 +393,7 @@ class _NaturalInseminationPageState extends State<NaturalInseminationPage> {
 
   Widget _buildInseminationList() {
     return StreamBuilder(
-      stream: FirebaseFirestore.instance.collection('natural_insemination').snapshots(),
+      stream: _inseminationCollection.snapshots(),
       builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
@@ -355,7 +418,7 @@ class _NaturalInseminationPageState extends State<NaturalInseminationPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildRecordDetail('Date:', data['date']),
-                    _buildRecordDetail('Cattle ID:', data['cattle_id']),
+                    _buildRecordDetail('Cattle Name:', data['cattle_name']), 
                     _buildRecordDetail('Father Breed:', data['father_breed']),
                     _buildRecordDetail('Notes:', data['notes']),
                     _buildRecordDetail('Cost:', data['cost']),

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class DewormingPage extends StatefulWidget {
@@ -14,21 +15,41 @@ class _DewormingPageState extends State<DewormingPage> {
   final _diseaseController = TextEditingController();
   final _drugUsedController = TextEditingController();
   final _notesController = TextEditingController();
+  final _costController = TextEditingController(); // New cost controller
 
-  final CollectionReference _dewormingCollection =
-      FirebaseFirestore.instance.collection('deworming');
-
+  late final CollectionReference _dewormingCollection;
   List<DocumentSnapshot> _dewormingList = [];
+  List<DocumentSnapshot> _cattleList = []; // To hold cattle data
+  String? _selectedCattleId; // To hold selected cattle ID
   bool _isFormVisible = false;
   String? _editingDocId;
 
   @override
   void initState() {
     super.initState();
+    _initializeCollection();
     _fetchDewormingRecords();
+    _fetchCattle(); // Fetch cattle data on initialization
+  }
+
+  void _initializeCollection() {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('User not logged in.')),
+      );
+      return;
+    }
+    _dewormingCollection = FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('deworming');
   }
 
   Future<void> _fetchDewormingRecords() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
     try {
       final snapshot = await _dewormingCollection.get();
       setState(() {
@@ -41,23 +62,53 @@ class _DewormingPageState extends State<DewormingPage> {
     }
   }
 
+  Future<void> _fetchCattle() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('cattle')
+          .where('userId',
+              isEqualTo: userId) 
+          .get();
+      setState(() {
+        _cattleList = snapshot.docs;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load cattle: $e')),
+      );
+    }
+  }
+
   Future<void> _submitForm() async {
     final dateOfDeworming = _dateOfDewormingController.text;
-    final cattleId = _cattleIdController.text;
     final vetName = _vetNameController.text;
     final method = _methodController.text;
     final disease = _diseaseController.text;
     final drugUsed = _drugUsedController.text;
     final notes = _notesController.text;
+    final cost = _costController.text; // New cost input
 
     if (dateOfDeworming.isEmpty ||
-        cattleId.isEmpty ||
+        _selectedCattleId == null ||
         vetName.isEmpty ||
         method.isEmpty ||
         disease.isEmpty ||
-        drugUsed.isEmpty) {
+        drugUsed.isEmpty ||
+        cost.isEmpty) {
+      // Check for cost
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please fill in all required fields')),
+      );
+      return;
+    }
+
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('User not logged in.')),
       );
       return;
     }
@@ -67,12 +118,13 @@ class _DewormingPageState extends State<DewormingPage> {
         // Add new record
         await _dewormingCollection.add({
           'date': dateOfDeworming,
-          'cattleId': cattleId,
+          'cattleId': _selectedCattleId, // Use selected cattle ID
           'vetName': vetName,
           'method': method,
           'disease': disease,
           'drugUsed': drugUsed,
           'notes': notes,
+          'cost': cost, // Save cost
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Data saved successfully')),
@@ -81,12 +133,13 @@ class _DewormingPageState extends State<DewormingPage> {
         // Update existing record
         await _dewormingCollection.doc(_editingDocId).update({
           'date': dateOfDeworming,
-          'cattleId': cattleId,
+          'cattleId': _selectedCattleId,
           'vetName': vetName,
           'method': method,
           'disease': disease,
           'drugUsed': drugUsed,
           'notes': notes,
+          'cost': cost, // Update cost
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Data updated successfully')),
@@ -109,30 +162,35 @@ class _DewormingPageState extends State<DewormingPage> {
   }
 
   void _clearForm() {
-    _cattleIdController.clear();
+    _selectedCattleId = null; // Clear selected cattle ID
     _dateOfDewormingController.clear();
     _vetNameController.clear();
     _methodController.clear();
     _diseaseController.clear();
     _drugUsedController.clear();
     _notesController.clear();
+    _costController.clear(); // Clear cost field
   }
 
   void _editRecord(DocumentSnapshot doc) {
     setState(() {
       _editingDocId = doc.id;
-      _cattleIdController.text = doc['cattleId'];
+      _selectedCattleId = doc['cattleId']; // Set selected cattle ID
       _dateOfDewormingController.text = doc['date'];
       _vetNameController.text = doc['vetName'];
       _methodController.text = doc['method'];
       _diseaseController.text = doc['disease'];
       _drugUsedController.text = doc['drugUsed'];
       _notesController.text = doc['notes'];
+      _costController.text = doc['cost'].toString(); // Set cost for editing
       _isFormVisible = true;
     });
   }
 
   void _deleteRecord(String docId) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
     try {
       await _dewormingCollection.doc(docId).delete();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -221,7 +279,8 @@ class _DewormingPageState extends State<DewormingPage> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Text(
               'A detailed summary of your livestock\'s deworming schedules and overall health status.',
               style: TextStyle(color: Colors.black54),
@@ -248,10 +307,7 @@ class _DewormingPageState extends State<DewormingPage> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16.0),
-            _buildFormField(
-              controller: _cattleIdController,
-              labelText: 'Select Cattle',
-            ),
+            _buildCattleDropdown(), // Dropdown for cattle selection
             _buildFormField(
               controller: _dateOfDewormingController,
               labelText: 'Date Of Deworming',
@@ -264,7 +320,8 @@ class _DewormingPageState extends State<DewormingPage> {
                   lastDate: DateTime(2101),
                 );
                 if (pickedDate != null) {
-                  String formattedDate = '${pickedDate.year.toString().padLeft(4, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}';
+                  String formattedDate =
+                      '${pickedDate.year.toString().padLeft(4, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}';
                   _dateOfDewormingController.text = formattedDate;
                 }
               },
@@ -276,7 +333,14 @@ class _DewormingPageState extends State<DewormingPage> {
             _buildDropdownField(
               controller: _methodController,
               labelText: 'Method Of Deworming',
-              items: ['Pour-On', 'Oral Drench', 'Injectable', 'Feed Additive', 'Bolus', 'Paste'],
+              items: [
+                'Pour-On',
+                'Oral Drench',
+                'Injectable',
+                'Feed Additive',
+                'Bolus',
+                'Paste'
+              ],
             ),
             _buildFormField(
               controller: _diseaseController,
@@ -285,6 +349,11 @@ class _DewormingPageState extends State<DewormingPage> {
             _buildFormField(
               controller: _drugUsedController,
               labelText: 'Name of Medicine',
+            ),
+            _buildFormField(
+              controller: _costController,
+              labelText: 'Cost of Deworming', // New cost field
+              inputType: TextInputType.number,
             ),
             _buildFormField(
               controller: _notesController,
@@ -297,11 +366,37 @@ class _DewormingPageState extends State<DewormingPage> {
               child: Text(_editingDocId == null ? 'Submit' : 'Update'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.lightBlueAccent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCattleDropdown() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: DropdownButtonFormField<String>(
+        value: _selectedCattleId,
+        onChanged: (String? newValue) {
+          setState(() {
+            _selectedCattleId = newValue; // Set selected cattle ID
+          });
+        },
+        decoration: InputDecoration(
+          labelText: 'Select Cattle',
+          border: OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+        items: _cattleList.map((doc) {
+          return DropdownMenuItem<String>(
+            value: doc.id, // Use document ID as value
+            child: Text(doc['name']), // Display cattle name
+          );
+        }).toList(),
       ),
     );
   }
@@ -384,6 +479,10 @@ class _DewormingPageState extends State<DewormingPage> {
                       final disease = doc['disease'] ?? '';
                       final drugUsed = doc['drugUsed'] ?? '';
                       final notes = doc['notes'] ?? '';
+                      final cost = (doc.data() as Map<String, dynamic>)
+                              .containsKey('cost')
+                          ? doc['cost']
+                          : 'N/A'; // Check for existence
 
                       return Card(
                         elevation: 4.0,
@@ -396,12 +495,17 @@ class _DewormingPageState extends State<DewormingPage> {
                           title: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Date: $date', style: TextStyle(fontWeight: FontWeight.bold)),
+                              Text('Date: $date',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.bold)),
                               Text('Cattle ID: $cattleId'),
                               Text('Veterinary Doctor: $vetName'),
                               Text('Method: $method'),
                               Text('Disease: $disease'),
                               Text('Drug Used: $drugUsed'),
+                              Text('Cost: \$${cost.toString()}',
+                                  style: TextStyle(
+                                      color: Colors.green)), // Display cost
                               Text('Notes: $notes'),
                             ],
                           ),

@@ -17,8 +17,10 @@ class _EditMedicinePageState extends State<EditMedicinePage> {
   final TextEditingController _quantityController = TextEditingController();
   final TextEditingController _expiryDateController = TextEditingController();
   final TextEditingController _supplierController = TextEditingController();
+  final TextEditingController _costController = TextEditingController(); 
 
   late FirestoreServices _firestoreServices;
+  Map<String, dynamic>? _medicine;
 
   @override
   void initState() {
@@ -33,17 +35,30 @@ class _EditMedicinePageState extends State<EditMedicinePage> {
     _quantityController.dispose();
     _expiryDateController.dispose();
     _supplierController.dispose();
+    _costController.dispose(); 
     super.dispose();
   }
 
   Future<void> _fetchMedicineDetails() async {
     try {
-      final medicines = await _firestoreServices.getMedicines();
-      final medicine = medicines.firstWhere((med) => med['id'] == widget.medicineId);
-      _nameController.text = medicine['name'];
-      _quantityController.text = medicine['quantity'];
-      _expiryDateController.text = medicine['expiryDate'];
-      _supplierController.text = medicine['supplier'];
+      final medicine = await _firestoreServices.getMedicine(widget.medicineId);
+      if (medicine != null) {
+        setState(() {
+          _medicine = medicine;
+          _nameController.text = medicine['name'];
+          _quantityController.text = medicine['quantity'];
+          _expiryDateController.text = medicine['expiryDate'];
+          _supplierController.text = medicine['supplier'];
+          _costController.text = medicine['cost']?.toStringAsFixed(2) ?? '0.00'; 
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Medicine not found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } catch (e) {
       print('Error fetching medicine details: $e');
     }
@@ -57,6 +72,7 @@ class _EditMedicinePageState extends State<EditMedicinePage> {
           'quantity': _quantityController.text,
           'expiryDate': _expiryDateController.text,
           'supplier': _supplierController.text,
+          'cost': double.tryParse(_costController.text) ?? 0.0, 
         });
         Navigator.pop(context);
       } catch (e) {
@@ -128,6 +144,20 @@ class _EditMedicinePageState extends State<EditMedicinePage> {
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter the supplier';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _costController,
+                labelText: 'Cost',
+                hintText: 'Enter cost',
+                icon: Icons.money,
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter the cost';
                   }
                   return null;
                 },

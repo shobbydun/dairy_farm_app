@@ -46,7 +46,7 @@ class _HomePageState extends State<HomePage> {
     try {
       final name = await widget.firestoreServices.getFarmName();
       setState(() {
-        farmName = name ?? 'No farm Name';
+        farmName = name ?? '';
       });
     } catch (e) {
       print("Error fetching farm name: $e");

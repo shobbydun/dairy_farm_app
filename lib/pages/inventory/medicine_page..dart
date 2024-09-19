@@ -1,7 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart'; 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dairy_harbor/components/inventory_components/add_medicine_page.dart';
 import 'package:dairy_harbor/components/inventory_components/edit_medicine_page.dart';
 import 'package:dairy_harbor/components/inventory_components/medicine_detail_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class MedicinePage extends StatefulWidget {
@@ -13,11 +14,12 @@ class MedicinePage extends StatefulWidget {
 
 class _MedicinePageState extends State<MedicinePage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final String _userId = FirebaseAuth.instance.currentUser?.uid ?? '';
   String _filterValue = 'Select filter';
   String _searchQuery = '';
   late Stream<QuerySnapshot> _medicinesStream;
-  String _sortField = 'addedDate'; 
-  bool _ascending = false; 
+  String _sortField = 'addedDate';
+  bool _ascending = false;
 
   @override
   void initState() {
@@ -26,18 +28,21 @@ class _MedicinePageState extends State<MedicinePage> {
   }
 
   void _updateStream() {
-    Query query = _firestore.collection('medicines');
+    Query query =
+        _firestore.collection('medicines').where('userId', isEqualTo: _userId);
 
-    //  sorting
+    // Sorting
     if (_sortField == 'expiryDate') {
       query = query.orderBy('expiryDate', descending: _ascending);
     } else if (_sortField == 'name') {
       query = query.orderBy('name');
     } else if (_sortField == 'supplier') {
       query = query.orderBy('supplier');
+    } else if (_sortField == 'cost') {
+      query = query.orderBy('cost', descending: _ascending);
     }
 
-    //  search query
+    // Searching
     _medicinesStream = query.snapshots();
   }
 
@@ -65,8 +70,12 @@ class _MedicinePageState extends State<MedicinePage> {
           _sortField = 'supplier';
           _ascending = true;
           break;
+        case 'Cost':
+          _sortField = 'cost';
+          _ascending = true;
+          break;
         default:
-          _sortField = 'addedDate'; //  sort by addedDate
+          _sortField = 'addedDate'; // sort by addedDate
           _ascending = false;
       }
       _updateStream();
@@ -152,11 +161,15 @@ class _MedicinePageState extends State<MedicinePage> {
                   Text('Filter by:'),
                   DropdownButton<String>(
                     hint: Text('Select filter'),
-                    value: _filterValue == 'Select filter' ? null : _filterValue,
+                    value:
+                        _filterValue == 'Select filter' ? null : _filterValue,
                     items: [
-                      DropdownMenuItem(value: 'Expiry Date', child: Text('Expiry Date')),
+                      DropdownMenuItem(
+                          value: 'Expiry Date', child: Text('Expiry Date')),
                       DropdownMenuItem(value: 'Name', child: Text('Name')),
-                      DropdownMenuItem(value: 'Supplier', child: Text('Supplier')),
+                      DropdownMenuItem(
+                          value: 'Supplier', child: Text('Supplier')),
+                      DropdownMenuItem(value: 'Cost', child: Text('Cost')),
                     ],
                     onChanged: _onFilterChanged,
                   ),
@@ -176,8 +189,11 @@ class _MedicinePageState extends State<MedicinePage> {
                 final totalMedicines = medicines.length;
                 final expiringSoon = medicines.where((doc) {
                   final expiryDate = DateTime.parse(doc['expiryDate']);
-                  return expiryDate.isBefore(DateTime.now().add(Duration(days: 30)));
+                  return expiryDate
+                      .isBefore(DateTime.now().add(Duration(days: 30)));
                 }).length;
+                final totalCost = medicines.fold<double>(
+                    0.0, (sum, doc) => sum + (doc['cost']?.toDouble() ?? 0.0));
 
                 return Container(
                   width: double.infinity,
@@ -193,26 +209,39 @@ class _MedicinePageState extends State<MedicinePage> {
                       ),
                     ],
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Total Medicines: $totalMedicines',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Total Medicines: $totalMedicines',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      Text(
-                        'Expiring Soon: $expiringSoon',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.redAccent,
+                        SizedBox(width: 16), // Add spacing between items
+                        Text(
+                          'Expiring Soon: $expiringSoon',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red[600],
+                          ),
                         ),
-                      ),
-                    ],
+                        SizedBox(width: 16), // Add spacing between items
+                        Text(
+                          'Total Cost: \Kshs ${totalCost.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.greenAccent,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -233,7 +262,8 @@ class _MedicinePageState extends State<MedicinePage> {
                     final medicines = snapshot.data!.docs.where((doc) {
                       final name = doc['name'].toString().toLowerCase();
                       final supplier = doc['supplier'].toString().toLowerCase();
-                      return name.contains(_searchQuery) || supplier.contains(_searchQuery);
+                      return name.contains(_searchQuery) ||
+                          supplier.contains(_searchQuery);
                     }).toList();
 
                     return DataTable(
@@ -242,6 +272,7 @@ class _MedicinePageState extends State<MedicinePage> {
                         DataColumn(label: Text('Quantity')),
                         DataColumn(label: Text('Expiry Date')),
                         DataColumn(label: Text('Supplier')),
+                        DataColumn(label: Text('Cost')),
                         DataColumn(label: Text('Actions')),
                       ],
                       rows: medicines.map((doc) {
@@ -250,45 +281,53 @@ class _MedicinePageState extends State<MedicinePage> {
                         final quantity = doc['quantity'];
                         final expiryDate = doc['expiryDate'];
                         final supplier = doc['supplier'];
+                        final cost = doc['cost']?.toStringAsFixed(2) ?? '0.00';
 
                         return DataRow(cells: [
                           DataCell(Text(name)),
-                          DataCell(Text(quantity)),
+                          DataCell(Text(quantity.toString())),
                           DataCell(Text(expiryDate)),
                           DataCell(Text(supplier)),
+                          DataCell(Text('\Kshs${cost}')),
                           DataCell(Row(
                             children: [
                               IconButton(
-                                icon: Icon(Icons.info, color: Colors.blueAccent),
+                                icon:
+                                    Icon(Icons.info, color: Colors.blueAccent),
                                 onPressed: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => MedicineDetailPage(medicineId: id),
+                                      builder: (context) =>
+                                          MedicineDetailPage(medicineId: id),
                                     ),
                                   );
                                 },
                               ),
                               IconButton(
-                                icon: Icon(Icons.edit, color: Colors.orangeAccent),
+                                icon: Icon(Icons.edit,
+                                    color: Colors.orangeAccent),
                                 onPressed: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => EditMedicinePage(medicineId: id),
+                                      builder: (context) =>
+                                          EditMedicinePage(medicineId: id),
                                     ),
                                   );
                                 },
                               ),
                               IconButton(
-                                icon: Icon(Icons.delete, color: Colors.redAccent),
+                                icon:
+                                    Icon(Icons.delete, color: Colors.redAccent),
                                 onPressed: () async {
                                   bool? confirm = await showDialog(
                                     context: context,
                                     builder: (BuildContext context) {
                                       return AlertDialog(
                                         title: Text('Confirm Delete'),
-                                        content: Text('Are you sure you want to delete this item?'),
+                                        content: Text(
+                                            'Are you sure you want to delete this item?'),
                                         actions: <Widget>[
                                           TextButton(
                                             child: Text('Cancel'),

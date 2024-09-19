@@ -8,6 +8,8 @@ class MachineryDetailsPage extends StatefulWidget {
   final String machineryType;
   final String machineryCondition;
   final String dateAcquired;
+  final double buyCost;
+  final double maintenanceCost;
 
   const MachineryDetailsPage({
     super.key,
@@ -16,6 +18,8 @@ class MachineryDetailsPage extends StatefulWidget {
     required this.machineryType,
     required this.machineryCondition,
     required this.dateAcquired,
+    required this.buyCost,
+    required this.maintenanceCost,
   });
 
   @override
@@ -45,14 +49,12 @@ class _MachineryDetailsPageState extends State<MachineryDetailsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildDetailRow(
-                        Icons.settings, 'Name:', widget.machineryName),
-                    _buildDetailRow(
-                        Icons.category, 'Type:', widget.machineryType),
-                    _buildDetailRow(Icons.health_and_safety, 'Condition:',
-                        widget.machineryCondition),
-                    _buildDetailRow(Icons.date_range, 'Date Acquired:',
-                        widget.dateAcquired),
+                    _buildDetailRow(Icons.settings, 'Name:', widget.machineryName),
+                    _buildDetailRow(Icons.category, 'Type:', widget.machineryType),
+                    _buildDetailRow(Icons.health_and_safety, 'Condition:', widget.machineryCondition),
+                    _buildDetailRow(Icons.date_range, 'Date Acquired:', widget.dateAcquired),
+                    _buildDetailRow(Icons.monetization_on, 'Purchase Cost:', '\Kshs ${widget.buyCost.toStringAsFixed(2)}'),
+                    _buildDetailRow(Icons.monetization_on, 'Maintenance Cost:', '\Kshs ${widget.maintenanceCost.toStringAsFixed(2)}'),
                   ],
                 ),
               ),
@@ -106,8 +108,7 @@ class _MachineryDetailsPageState extends State<MachineryDetailsPage> {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: Text('Confirm Deletion'),
-          content:
-              Text('Are you sure you want to delete this machinery record?'),
+          content: Text('Are you sure you want to delete this machinery record?'),
           actions: [
             TextButton(
               onPressed: () {

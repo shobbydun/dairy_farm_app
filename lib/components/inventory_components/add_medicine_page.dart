@@ -14,6 +14,7 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
   final _quantityController = TextEditingController();
   final _expiryDateController = TextEditingController();
   final _supplierController = TextEditingController();
+  final _costController = TextEditingController(); // Added cost field
 
   late FirestoreServices _firestoreServices;
 
@@ -29,6 +30,7 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
     _quantityController.dispose();
     _expiryDateController.dispose();
     _supplierController.dispose();
+    _costController.dispose(); // Dispose added controller
     super.dispose();
   }
 
@@ -40,6 +42,7 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
           _quantityController.text,
           _expiryDateController.text,
           _supplierController.text,
+          double.tryParse(_costController.text) ?? 0.0, // Added cost parameter
         );
         Navigator.pop(context);
       } catch (e) {
@@ -131,6 +134,20 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter the supplier';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _costController,
+                labelText: 'Cost',
+                hintText: 'Enter cost',
+                icon: Icons.money,
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter the cost';
                   }
                   return null;
                 },

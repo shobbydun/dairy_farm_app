@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -70,148 +71,145 @@ class CattleProfilePage extends StatelessWidget {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Cattle Profile'),
-        backgroundColor: Colors.blueAccent,
-      ),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('cattle')
-            .doc(cattleId)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+ @override
+Widget build(BuildContext context) {
+  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text('Cattle Profile'),
+      backgroundColor: Colors.blueAccent,
+    ),
+    body: StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('cattle')
+          .doc(cattleId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          // Checking if data exists and is of the expected type
-          var data = snapshot.data?.data();
-          if (data == null || data is! Map<String, dynamic>) {
-            return Center(child: Text('No data available'));
-          }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
 
-          var cattleData = data as Map<String, dynamic>;
-          var createdAt = cattleData['createdAt'] as Timestamp?;
-          var timestamp = createdAt != null
-              ? DateFormat('yyyy-MM-dd HH:mm:ss').format(createdAt.toDate())
-              : 'NA'; 
+        var data = snapshot.data?.data();
+        if (data == null || data is! Map<String, dynamic> || data['userId'] != currentUserId) {
+          return Center(child: Text('No data available or unauthorized access'));
+        }
 
-          return Center(
-            child: Card(
-              elevation: 8.0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15.0),
-              ),
-              margin:
-                  const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    cattleData['imageUrl'] != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(15.0),
-                            child: Image.network(
-                              cattleData['imageUrl'],
-                              height: 200,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : const Icon(Icons.pets, size: 100),
-                    const SizedBox(height: 20),
-                    Text(
-                      cattleData['name'] ?? 'N/A',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blueAccent,
+        var cattleData = data as Map<String, dynamic>;
+        var createdAt = cattleData['createdAt'] as Timestamp?;
+        var timestamp = createdAt != null
+            ? DateFormat('yyyy-MM-dd HH:mm:ss').format(createdAt.toDate())
+            : 'NA';
+
+        return Center(
+          child: Card(
+            elevation: 8.0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15.0),
+            ),
+            margin: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  cattleData['imageUrl'] != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(15.0),
+                          child: Image.network(
+                            cattleData['imageUrl'],
+                            height: 200,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : const Icon(Icons.pets, size: 100),
+                  const SizedBox(height: 20),
+                  Text(
+                    cattleData['name'] ?? 'N/A',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueAccent,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'DOB: ${cattleData['dob'] ?? 'N/A'}',
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                  Text(
+                    'Gender: ${cattleData['gender'] ?? 'N/A'}',
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                  Text(
+                    'Breed: ${cattleData['breed'] ?? 'N/A'}',
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                  Text(
+                    'Father Breed: ${cattleData['fatherBreed'] ?? 'N/A'}',
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                  Text(
+                    'Mother Breed: ${cattleData['motherBreed'] ?? 'N/A'}',
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                  Text(
+                    'Method Bred: ${cattleData['methodBred'] ?? 'N/A'}',
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                  Text(
+                    'Status: ${cattleData['status'] ?? 'N/A'}',
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                  Text(
+                    'Added on: $timestamp',
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () => _editCattle(context, cattleData),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
+                          textStyle: const TextStyle(fontSize: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                        ),
+                        child: const Text('Edit', style: TextStyle(color: Colors.white)),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'DOB: ${cattleData['dob'] ?? 'N/A'}',
-                      style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                    Text(
-                      'Gender: ${cattleData['gender'] ?? 'N/A'}',
-                      style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                    Text(
-                      'Breed: ${cattleData['breed'] ?? 'N/A'}',
-                      style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                    Text(
-                      'Father Breed: ${cattleData['fatherBreed'] ?? 'N/A'}',
-                      style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                    Text(
-                      'Mother Breed: ${cattleData['motherBreed'] ?? 'N/A'}',
-                      style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                    Text(
-                      'Method Bred: ${cattleData['methodBred'] ?? 'N/A'}',
-                      style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                    Text(
-                      'Status: ${cattleData['status'] ?? 'N/A'}',
-                      style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                    Text(
-                      'Added on: $timestamp',
-                      style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () => _editCattle(context, cattleData),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 12.0, horizontal: 24.0),
-                            textStyle: const TextStyle(fontSize: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10.0),
-                            ),
+                      ElevatedButton(
+                        onPressed: () => _deleteCattle(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0),
+                          textStyle: const TextStyle(fontSize: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
                           ),
-                          child: const Text('Edit',
-                              style: TextStyle(color: Colors.white)),
                         ),
-                        ElevatedButton(
-                          onPressed: () => _deleteCattle(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 12.0, horizontal: 24.0),
-                            textStyle: const TextStyle(fontSize: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10.0),
-                            ),
-                          ),
-                          child: const Text('Delete',
-                              style: TextStyle(color: Colors.white)),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                        child: const Text('Delete', style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
+
 }
 
 class EditCattlePage extends StatefulWidget {
@@ -246,17 +244,12 @@ class _EditCattlePageState extends State<EditCattlePage> {
     super.initState();
     _nameController = TextEditingController(text: widget.initialData['name']);
     _dobController = TextEditingController(text: widget.initialData['dob']);
-    _genderController =
-        TextEditingController(text: widget.initialData['gender']);
+    _genderController = TextEditingController(text: widget.initialData['gender']);
     _breedController = TextEditingController(text: widget.initialData['breed']);
-    _fatherBreedController =
-        TextEditingController(text: widget.initialData['fatherBreed']);
-    _motherBreedController =
-        TextEditingController(text: widget.initialData['motherBreed']);
-    _methodBredController =
-        TextEditingController(text: widget.initialData['methodBred']);
-    _statusController =
-        TextEditingController(text: widget.initialData['status']);
+    _fatherBreedController = TextEditingController(text: widget.initialData['fatherBreed']);
+    _motherBreedController = TextEditingController(text: widget.initialData['motherBreed']);
+    _methodBredController = TextEditingController(text: widget.initialData['methodBred']);
+    _statusController = TextEditingController(text: widget.initialData['status']);
   }
 
   Future<void> _pickImage() async {
@@ -292,6 +285,8 @@ class _EditCattlePageState extends State<EditCattlePage> {
       _isLoading = true;
     });
 
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
     try {
       String? imageUrl;
       if (_image != null) {
@@ -302,8 +297,7 @@ class _EditCattlePageState extends State<EditCattlePage> {
         await ref.putFile(_image!);
         imageUrl = await ref.getDownloadURL();
       } else {
-        imageUrl = widget.initialData[
-            'imageUrl'];
+        imageUrl = widget.initialData['imageUrl'];
       }
 
       await FirebaseFirestore.instance
@@ -320,6 +314,7 @@ class _EditCattlePageState extends State<EditCattlePage> {
         'status': _statusController.text,
         'imageUrl': imageUrl,
         'updatedAt': Timestamp.now(),
+        'userId': currentUserId, // Ensure userId is updated
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -396,29 +391,21 @@ class _EditCattlePageState extends State<EditCattlePage> {
                       const SizedBox(height: 20),
                       _buildImageDisplay(),
                       const SizedBox(height: 20),
-                      _buildTextField(
-                          'Cow\'s Name', _nameController, Icons.pets),
+                      _buildTextField('Cow\'s Name', _nameController, Icons.pets),
                       _buildDatePickerField(),
-                      _buildTextField(
-                          'Gender', _genderController, Icons.person),
+                      _buildTextField('Gender', _genderController, Icons.person),
                       _buildTextField('Breed', _breedController, Icons.tag),
-                      _buildTextField('Father\'s Breed', _fatherBreedController,
-                          Icons.family_restroom),
-                      _buildTextField('Mother\'s Breed', _motherBreedController,
-                          Icons.family_restroom),
-                      _buildTextField(
-                          'Method Bred', _methodBredController, Icons.science),
-                      _buildTextField(
-                          'Status', _statusController, Icons.health_and_safety),
+                      _buildTextField('Father\'s Breed', _fatherBreedController, Icons.family_restroom),
+                      _buildTextField('Mother\'s Breed', _motherBreedController, Icons.family_restroom),
+                      _buildTextField('Method Bred', _methodBredController, Icons.science),
+                      _buildTextField('Status', _statusController, Icons.health_and_safety),
                       const SizedBox(height: 20),
                       Center(
                         child: ElevatedButton(
-                          onPressed:
-                              _isLoading ? null : _uploadImageAndSaveData,
+                          onPressed: _isLoading ? null : _uploadImageAndSaveData,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blueAccent,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 14.0, horizontal: 32.0),
+                            padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 32.0),
                             textStyle: const TextStyle(fontSize: 18),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12.0),
@@ -428,11 +415,9 @@ class _EditCattlePageState extends State<EditCattlePage> {
                               ? const SizedBox(
                                   width: 24,
                                   height: 24,
-                                  child: CircularProgressIndicator(
-                                      color: Colors.white),
+                                  child: CircularProgressIndicator(color: Colors.white),
                                 )
-                              : const Text('Save Changes',
-                                  style: TextStyle(color: Colors.white)),
+                              : const Text('Save Changes', style: TextStyle(color: Colors.white)),
                         ),
                       ),
                     ],
@@ -456,8 +441,7 @@ class _EditCattlePageState extends State<EditCattlePage> {
       child: ElevatedButton.icon(
         onPressed: _pickImage,
         icon: const Icon(Icons.photo_camera, size: 24, color: Colors.white),
-        label:
-            const Text('Upload Photo', style: TextStyle(color: Colors.white)),
+        label: const Text('Upload Photo', style: TextStyle(color: Colors.white)),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.blueAccent,
           padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 20.0),
@@ -470,8 +454,7 @@ class _EditCattlePageState extends State<EditCattlePage> {
     );
   }
 
-  Widget _buildTextField(
-      String label, TextEditingController controller, IconData icon) {
+  Widget _buildTextField(String label, TextEditingController controller, IconData icon) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(

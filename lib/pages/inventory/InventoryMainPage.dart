@@ -3,6 +3,7 @@ import 'package:dairy_harbor/pages/milk/milk_distribution_sales.dart';
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 
 import 'farm_machinery_page.dart';
@@ -13,209 +14,219 @@ class InventoryMainPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<FirestoreServices>(
-      builder: (context, firestoreService, child) {
-        return Scaffold(
-          appBar: AppBar(
-            backgroundColor: Colors.lightBlueAccent,
-            elevation: 0,
-          ),
-          body: FutureBuilder<Map<String, dynamic>>(
-            future: Future.wait([
-              firestoreService.getProfile(),
-              firestoreService.getFeeds(),
-              firestoreService.getMachinery(),
-            ]).then((results) {
-              return {
-                'profile': results[0],
-                'feeds': results[1],
-                'machinery': results[2],
-              };
-            }),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return Center(child: CircularProgressIndicator());
-              }
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-              final data = snapshot.data!;
-              final profile = data['profile'];
-              final feeds = data['feeds'];
-              final machinery = data['machinery'];
+    return ChangeNotifierProvider<FirestoreServices>(
+      create: (context) => FirestoreServices(userId),
+      child: Consumer<FirestoreServices>(
+        builder: (context, firestoreService, child) {
+          return Scaffold(
+            appBar: AppBar(
+              backgroundColor: Colors.lightBlueAccent,
+              elevation: 0,
+            ),
+            body: FutureBuilder<Map<String, dynamic>>(
+              future: Future.wait([
+                firestoreService.getProfile(),
+                firestoreService.getFeeds(),
+                firestoreService.getMachinery(),
+              ]).then((results) {
+                return {
+                  'profile': results[0],
+                  'feeds': results[1],
+                  'machinery': results[2],
+                };
+              }),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return Center(child: CircularProgressIndicator());
+                }
 
-              final totalCows = profile?['numberOfCows'] ?? 'N/A';
-              final milkProduction = profile?['dailyMilkProduction'] ?? 'N/A';
-              final feedStock = feeds.length.toString();
-              final machineryStatus = machinery.isEmpty ? 'N/A' : 'Operational';
+                final data = snapshot.data!;
+                final profile = data['profile'];
+                final feeds = data['feeds'];
+                final machinery = data['machinery'];
 
-              return Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 13),
-                      const Text(
-                        'Inventory Overview:',
-                        style: TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold),
-                      ),
-                      Container(
-                        height: 200,
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
+                final totalCows = profile?['numberOfCows'] ?? 'N/A';
+                final milkProduction = profile?['dailyMilkProduction'] ?? 'N/A';
+                final feedStock = feeds.length.toString();
+                final machineryStatus = machinery.isEmpty ? 'N/A' : 'Operational';
+
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 13),
+                        const Text(
+                          'Inventory Overview:',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Container(
+                          height: 200,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                _buildStatCard(
+                                  'Total Cows',
+                                  totalCows,
+                                  Icons.pets,
+                                  () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => CattleList(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                _buildStatCard(
+                                  'Milk Production',
+                                  '$milkProduction Liters',
+                                  Icons.local_drink,
+                                  () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            MilkDistributionSales(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                _buildStatCard(
+                                  'Feed Stock',
+                                  '$feedStock Bags',
+                                  Icons.food_bank,
+                                  () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => FeedsPage(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                _buildStatCard(
+                                  'Machinery Status',
+                                  machineryStatus,
+                                  Icons.build,
+                                  () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => FarmMachineryPage(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+
+                        // Placeholder for Charts/Graphs
+                        Container(
+                          padding: const EdgeInsets.all(8.0),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.lightBlueAccent.withOpacity(0.8),
+                                blurRadius: 8,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildStatCard(
-                                'Total Cows',
-                                totalCows,
-                                Icons.pets,
-                                () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          CattleList(), // Navigate to Cow List page
-                                    ),
-                                  );
-                                },
+                              Text(
+                                'Milk Production Trends',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                              _buildStatCard(
-                                'Milk Production',
-                                '$milkProduction Liters',
-                                Icons.local_drink,
-                                () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          MilkDistributionSales(), // Navigate to Milk Sales page
+                              SizedBox(height: 8),
+                              Container(
+                                height: 200,
+                                child: BarChart(
+                                  BarChartData(
+                                    gridData: FlGridData(show: false),
+                                    titlesData: FlTitlesData(
+                                      bottomTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          reservedSize: 38,
+                                          getTitlesWidget: getBottomTitles,
+                                        ),
+                                      ),
+                                      leftTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          reservedSize: 38,
+                                          getTitlesWidget: getLeftTitles,
+                                        ),
+                                      ),
                                     ),
-                                  );
-                                },
-                              ),
-                              _buildStatCard(
-                                'Feed Stock',
-                                '$feedStock Bags',
-                                Icons.food_bank,
-                                () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => FeedsPage(),
+                                    borderData: FlBorderData(
+                                      show: false,
                                     ),
-                                  );
-                                },
-                              ),
-                              _buildStatCard(
-                                'Machinery Status',
-                                machineryStatus,
-                                Icons.build,
-                                () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => FarmMachineryPage(),
-                                    ),
-                                  );
-                                },
+                                    barGroups: showingGroups(),
+                                  ),
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                      SizedBox(height: 16),
-
-                      // Placeholder for Charts/Graphs
-                      Container(
-                        padding: const EdgeInsets.all(8.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.lightBlueAccent.withOpacity(0.8),
-                              blurRadius: 8,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        SizedBox(height: 16),
+                        // Navigation buttons
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            Text(
-                              'Milk Production Trends',
-                              style: TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold),
+                            _buildNavigationButton(
+                              'Feeds Overview',
+                              Icons.food_bank,
+                              () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => FeedsPage(),
+                                  ),
+                                );
+                              },
                             ),
-                            SizedBox(height: 8),
-                            Container(
-                              height: 200,
-                              child: BarChart(
-                                BarChartData(
-                                  gridData: FlGridData(show: false),
-                                  titlesData: FlTitlesData(
-                                    bottomTitles: AxisTitles(
-                                      sideTitles: SideTitles(
-                                        showTitles: true,
-                                        reservedSize: 38,
-                                        getTitlesWidget: getBottomTitles,
-                                      ),
-                                    ),
-                                    leftTitles: AxisTitles(
-                                      sideTitles: SideTitles(
-                                        showTitles: true,
-                                        reservedSize: 38,
-                                        getTitlesWidget: getLeftTitles,
-                                      ),
-                                    ),
+                            _buildNavigationButton(
+                              'Machinery Overview',
+                              Icons.build,
+                              () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => FarmMachineryPage(),
                                   ),
-                                  borderData: FlBorderData(
-                                    show: false, // No borders
-                                  ),
-                                  barGroups: showingGroups(),
-                                ),
-                              ),
+                                );
+                              },
                             ),
                           ],
                         ),
-                      ),
-                      SizedBox(height: 16),
-                      // Navigation buttons
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildNavigationButton(
-                            'Feeds Overview',
-                            Icons.food_bank,
-                            () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => FeedsPage()),
-                              );
-                            },
-                          ),
-                          _buildNavigationButton(
-                            'Machinery Overview',
-                            Icons.build,
-                            () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => FarmMachineryPage()),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
-        );
-      },
+                );
+              },
+            ),
+          );
+        },
+      ),
     );
   }
 

@@ -168,19 +168,20 @@ class _SidebarMenuState extends State<SidebarMenu> {
                     },
                     children: [
                       _buildSubMenuItem(
-                        text: 'Admin Wages',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.pushNamed(context, '/adminWages');
-                        },
-                      ),
-                      _buildSubMenuItem(
                         text: 'Inventory Main',
                         onTap: () {
                           Navigator.pop(context);
                           Navigator.pushNamed(context, '/inventory');
                         },
                       ),
+                      _buildSubMenuItem(
+                        text: 'Admin Wages',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushNamed(context, '/adminWages');
+                        },
+                      ),
+                      
                       _buildSubMenuItem(
                         text: 'Farm Machinery',
                         onTap: () {
@@ -202,20 +203,20 @@ class _SidebarMenuState extends State<SidebarMenu> {
                           Navigator.pushNamed(context, '/medicine');
                         },
                       ),
-                      _buildSubMenuItem(
-                        text: 'Notification',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.pushNamed(context, '/notification');
-                        },
-                      ),
-                      _buildSubMenuItem(
-                        text: 'User Profile',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.pushNamed(context, '/userProfile');
-                        },
-                      ),
+                      // _buildSubMenuItem(
+                      //   text: 'Notification',
+                      //   onTap: () {
+                      //     Navigator.pop(context);
+                      //     Navigator.pushNamed(context, '/notification');
+                      //   },
+                      // ),
+                      // _buildSubMenuItem(
+                      //   text: 'User Profile',
+                      //   onTap: () {
+                      //     Navigator.pop(context);
+                      //     Navigator.pushNamed(context, '/userProfile');
+                      //   },
+                      // ),
                     ],
                   ),
                   _buildExpandableMenuItem(

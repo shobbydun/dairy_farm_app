@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class VaccinationPage extends StatefulWidget {
@@ -12,6 +13,27 @@ class _VaccinationPageState extends State<VaccinationPage> {
   final TextEditingController _diseaseController = TextEditingController();
   final TextEditingController _costController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+
+  late CollectionReference _vaccinationCollection;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeCollection();
+  }
+
+  void _initializeCollection() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _vaccinationCollection = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('vaccinations');
+    } else {
+      // Handle case when user is not logged in
+      _vaccinationCollection = FirebaseFirestore.instance.collection('vaccinations');
+    }
+  }
 
   @override
   void dispose() {
@@ -140,9 +162,7 @@ class _VaccinationPageState extends State<VaccinationPage> {
             ),
             const SizedBox(height: 16.0),
             StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('vaccinations')
-                  .snapshots(),
+              stream: _vaccinationCollection.snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(child: CircularProgressIndicator());
@@ -175,10 +195,7 @@ class _VaccinationPageState extends State<VaccinationPage> {
                                 await _showConfirmationDialog(context);
                             if (shouldDelete) {
                               try {
-                                await FirebaseFirestore.instance
-                                    .collection('vaccinations')
-                                    .doc(doc.id)
-                                    .delete();
+                                await _vaccinationCollection.doc(doc.id).delete();
                               } catch (e) {
                                 // Handle delete failure if needed
                                 Future.microtask(() {
@@ -256,10 +273,7 @@ class _VaccinationPageState extends State<VaccinationPage> {
             ElevatedButton(
               onPressed: () async {
                 try {
-                  await FirebaseFirestore.instance
-                      .collection('vaccinations')
-                      .doc(docId)
-                      .update({
+                  await _vaccinationCollection.doc(docId).update({
                     'doctor_name': _doctorNameController.text.trim(),
                     'vaccine_name': _vaccineNameController.text.trim(),
                     'disease': _diseaseController.text.trim(),
@@ -309,7 +323,7 @@ class _VaccinationPageState extends State<VaccinationPage> {
 
     if (doctorName.isNotEmpty && vaccineName.isNotEmpty && disease.isNotEmpty) {
       try {
-        await FirebaseFirestore.instance.collection('vaccinations').add({
+        await _vaccinationCollection.add({
           'doctor_name': doctorName,
           'vaccine_name': vaccineName,
           'disease': disease,

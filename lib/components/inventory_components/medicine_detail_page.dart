@@ -1,6 +1,6 @@
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 class MedicineDetailPage extends StatefulWidget {
   final String medicineId;
@@ -24,8 +24,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
 
   Future<void> _fetchMedicineDetails() async {
     try {
-      final medicines = await _firestoreServices.getMedicines();
-      final medicine = medicines.firstWhere((med) => med['id'] == widget.medicineId);
+      final medicine = await _firestoreServices.getMedicine(widget.medicineId);
       setState(() {
         _medicine = medicine;
       });
@@ -50,6 +49,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
     final quantity = _medicine!['quantity'];
     final expiryDate = _medicine!['expiryDate'];
     final supplier = _medicine!['supplier'];
+    final cost = _medicine!['cost']?.toStringAsFixed(2) ?? '0.00'; // Added cost
 
     return Scaffold(
       appBar: AppBar(
@@ -75,6 +75,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                     _buildDetailRow(Icons.confirmation_number, 'Quantity:', quantity),
                     _buildDetailRow(Icons.calendar_today, 'Expiry Date:', expiryDate),
                     _buildDetailRow(Icons.store, 'Supplier:', supplier),
+                    _buildDetailRow(Icons.money, 'Cost:', '\Kshs $cost'), // Added cost row
                   ],
                 ),
               ),

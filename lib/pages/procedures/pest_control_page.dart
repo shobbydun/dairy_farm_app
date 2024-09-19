@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class PestControlPage extends StatefulWidget {
   @override
@@ -14,6 +15,29 @@ class _PestControlPageState extends State<PestControlPage> {
   final _costController = TextEditingController();
   String? _editingDocId;
   bool _isFormVisible = false;
+  late CollectionReference _pestControlCollection;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeCollection();
+  }
+
+  Future<void> _initializeCollection() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        _pestControlCollection = FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('pest_control_records');
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('User not logged in')),
+      );
+    }
+  }
 
   Future<void> _submitRecord() async {
     final pestType = _pestTypeController.text;
@@ -22,39 +46,43 @@ class _PestControlPageState extends State<PestControlPage> {
     final cost = double.tryParse(_costController.text) ?? 0.0;
 
     if (pestType.isNotEmpty && treatment.isNotEmpty && status.isNotEmpty) {
-      final firestore = FirebaseFirestore.instance;
-      if (_editingDocId == null) {
-        await firestore.collection('pest_control_records').add({
-          'pest_type': pestType,
-          'treatment': treatment,
-          'status': status,
-          'date': Timestamp.now(),
-          'cost': cost,
-        });
+      try {
+        if (_editingDocId == null) {
+          await _pestControlCollection.add({
+            'pest_type': pestType,
+            'treatment': treatment,
+            'status': status,
+            'date': Timestamp.now(),
+            'cost': cost,
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Pest Control Record Saved')),
+          );
+        } else {
+          await _pestControlCollection
+              .doc(_editingDocId)
+              .update({
+            'pest_type': pestType,
+            'treatment': treatment,
+            'status': status,
+            'cost': cost,
+          });
+          setState(() => _editingDocId = null);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Pest Control Record Updated')),
+          );
+        }
+
+        _pestTypeController.clear();
+        _treatmentController.clear();
+        _statusController.clear();
+        _costController.clear();
+        setState(() => _isFormVisible = false);
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Pest Control Record Saved')),
-        );
-      } else {
-        await firestore
-            .collection('pest_control_records')
-            .doc(_editingDocId)
-            .update({
-          'pest_type': pestType,
-          'treatment': treatment,
-          'status': status,
-          'cost': cost,
-        });
-        setState(() => _editingDocId = null);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Pest Control Record Updated')),
+          SnackBar(content: Text('Failed to save record: $e')),
         );
       }
-
-      _pestTypeController.clear();
-      _treatmentController.clear();
-      _statusController.clear();
-      _costController.clear();
-      setState(() => _isFormVisible = false);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please fill all fields')),
@@ -81,10 +109,13 @@ class _PestControlPageState extends State<PestControlPage> {
       ),
     );
     if (result == true) {
-      await FirebaseFirestore.instance
-          .collection('pest_control_records')
-          .doc(docId)
-          .delete();
+      try {
+        await _pestControlCollection.doc(docId).delete();
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete record: $e')),
+        );
+      }
     }
   }
 
@@ -132,9 +163,7 @@ class _PestControlPageState extends State<PestControlPage> {
 
   Widget _buildDashboard() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('pest_control_records')
-          .snapshots(),
+      stream: _pestControlCollection.snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
@@ -248,9 +277,7 @@ class _PestControlPageState extends State<PestControlPage> {
 
   Widget _buildCharts() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('pest_control_records')
-          .snapshots(),
+      stream: _pestControlCollection.snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
@@ -399,9 +426,7 @@ class _PestControlPageState extends State<PestControlPage> {
 
   Widget _buildPestControlRecordsList() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('pest_control_records')
-          .snapshots(),
+      stream: _pestControlCollection.snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());

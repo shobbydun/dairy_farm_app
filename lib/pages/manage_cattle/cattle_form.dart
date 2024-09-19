@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -55,57 +56,62 @@ class _CattleFormState extends State<CattleForm> {
     }
   }
 
-  Future<void> _uploadImageAndSaveData() async {
-    setState(() {
-      _isLoading = true;
+ Future<void> _uploadImageAndSaveData() async {
+  setState(() {
+    _isLoading = true;
+  });
+
+  try {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      throw Exception("User not logged in");
+    }
+
+    String? imageUrl;
+    if (_image != null) {
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('cattle_images')
+          .child('${DateTime.now().toIso8601String()}.jpg');
+      await ref.putFile(_image!);
+      imageUrl = await ref.getDownloadURL();
+    }
+
+    await FirebaseFirestore.instance.collection('cattle').add({
+      'userId': userId, 
+      'name': _nameController.text,
+      'dob': _dobController.text,
+      'gender': _genderController.text,
+      'breed': _breedController.text,
+      'fatherBreed': _fatherBreedController.text,
+      'motherBreed': _motherBreedController.text,
+      'methodBred': _methodBredController.text,
+      'status': _statusController.text,
+      'imageUrl': imageUrl,
+      'createdAt': Timestamp.fromDate(DateTime.now()),
     });
 
-    try {
-      String? imageUrl;
-      if (_image != null) {
-        final ref = FirebaseStorage.instance
-            .ref()
-            .child('cattle_images')
-            .child('${DateTime.now().toIso8601String()}.jpg');
-        await ref.putFile(_image!);
-        imageUrl = await ref.getDownloadURL();
-      }
-
-      await FirebaseFirestore.instance.collection('cattle').add({
-        'name': _nameController.text,
-        'dob': _dobController.text,
-        'gender': _genderController.text,
-        'breed': _breedController.text,
-        'fatherBreed': _fatherBreedController.text,
-        'motherBreed': _motherBreedController.text,
-        'methodBred': _methodBredController.text,
-        'status': _statusController.text,
-        'imageUrl': imageUrl,
-        'createdAt':
-            Timestamp.fromDate(DateTime.now()),
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cattle record added successfully!')),
-        );
-      }
-
-      _clearForm();
-      Navigator.pushNamed(context, '/cattleListPage');
-    } catch (e) {
-      print('Error saving data: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add cattle record: $e')),
-        );
-      }
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cattle record added successfully!')),
+      );
     }
+
+    _clearForm();
+    Navigator.pushNamed(context, '/cattleListPage');
+  } catch (e) {
+    print('Error saving data: $e');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to add cattle record: $e')),
+      );
+    }
+  } finally {
+    setState(() {
+      _isLoading = false;
+    });
   }
+}
 
   void _clearForm() {
     setState(() {

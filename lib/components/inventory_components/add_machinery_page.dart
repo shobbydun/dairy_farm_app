@@ -15,6 +15,8 @@ class _AddMachineryPageState extends State<AddMachineryPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _conditionController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
+  final TextEditingController _buyCostController = TextEditingController();
+  final TextEditingController _maintenanceCostController = TextEditingController();
   
   String _selectedType = 'Agricultural'; // Default value for dropdown
 
@@ -54,6 +56,8 @@ class _AddMachineryPageState extends State<AddMachineryPage> {
           _selectedType, 
           _conditionController.text,
           _dateController.text,
+          double.tryParse(_buyCostController.text) ?? 0.0,
+          double.tryParse(_maintenanceCostController.text) ?? 0.0,
         );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Machinery record added')),
@@ -124,6 +128,34 @@ class _AddMachineryPageState extends State<AddMachineryPage> {
                     keyboardType: TextInputType.datetime,
                   ),
                 ),
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _buyCostController,
+                labelText: 'Buy Cost',
+                hintText: 'Enter buy cost',
+                icon: Icons.monetization_on,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter the buy cost';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _maintenanceCostController,
+                labelText: 'Maintenance Cost per Month',
+                hintText: 'Enter maintenance cost',
+                icon: Icons.attach_money,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter the maintenance cost';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 24),
               ElevatedButton(

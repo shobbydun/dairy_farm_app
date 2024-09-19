@@ -8,6 +8,8 @@ class EditMachineryPage extends StatefulWidget {
   final String machineryType;
   final String machineryCondition;
   final String dateAcquired;
+  final double buyCost;
+  final double maintenanceCost;
 
   const EditMachineryPage({
     super.key,
@@ -16,6 +18,8 @@ class EditMachineryPage extends StatefulWidget {
     required this.machineryType,
     required this.machineryCondition,
     required this.dateAcquired,
+    required this.buyCost,
+    required this.maintenanceCost,
   });
 
   @override
@@ -27,8 +31,10 @@ class _EditMachineryPageState extends State<EditMachineryPage> {
   late TextEditingController _nameController;
   late TextEditingController _conditionController;
   late TextEditingController _dateController;
+  late TextEditingController _buyCostController;
+  late TextEditingController _maintenanceCostController;
 
-  String _selectedType = 'Agricultural'; 
+  String _selectedType = 'Agricultural';
 
   late FirestoreServices _firestoreServices;
 
@@ -42,6 +48,8 @@ class _EditMachineryPageState extends State<EditMachineryPage> {
     _selectedType = widget.machineryType;
     _conditionController = TextEditingController(text: widget.machineryCondition);
     _dateController = TextEditingController(text: widget.dateAcquired);
+    _buyCostController = TextEditingController(text: widget.buyCost.toStringAsFixed(2));
+    _maintenanceCostController = TextEditingController(text: widget.maintenanceCost.toStringAsFixed(2));
   }
 
   Future<void> _updateMachinery() async {
@@ -51,9 +59,11 @@ class _EditMachineryPageState extends State<EditMachineryPage> {
           widget.machineryId,
           {
             'name': _nameController.text,
-            'type': _selectedType, 
+            'type': _selectedType,
             'condition': _conditionController.text,
             'dateAcquired': _dateController.text,
+            'buyCost': double.tryParse(_buyCostController.text) ?? 0.0,
+            'maintenanceCost': double.tryParse(_maintenanceCostController.text) ?? 0.0,
           },
         );
         ScaffoldMessenger.of(context).showSnackBar(
@@ -74,6 +84,8 @@ class _EditMachineryPageState extends State<EditMachineryPage> {
     _nameController.dispose();
     _conditionController.dispose();
     _dateController.dispose();
+    _buyCostController.dispose();
+    _maintenanceCostController.dispose();
     super.dispose();
   }
 
@@ -128,6 +140,40 @@ class _EditMachineryPageState extends State<EditMachineryPage> {
                 hintText: 'YYYY-MM-DD',
                 icon: Icons.calendar_today,
                 keyboardType: TextInputType.datetime,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _buyCostController,
+                labelText: 'Purchase Cost',
+                hintText: 'Enter purchase cost',
+                icon: Icons.monetization_on,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter the purchase cost';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _maintenanceCostController,
+                labelText: 'Maintenance Cost',
+                hintText: 'Enter maintenance cost',
+                icon: Icons.monetization_on,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter the maintenance cost';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 24),
               ElevatedButton(

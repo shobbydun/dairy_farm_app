@@ -25,7 +25,7 @@ class _AdministrativeWagesState extends State<AdministrativeWages> {
     _searchController.addListener(_filterWages);
   }
 
-  void _loadWages() async {
+  Future<void> _loadWages() async {
     try {
       final wages = await _firestoreServices.getWages();
       setState(() {
@@ -37,7 +37,7 @@ class _AdministrativeWagesState extends State<AdministrativeWages> {
     }
   }
 
-  void _addWage() async {
+  Future<void> _addWage() async {
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => AddWagePage()),
@@ -45,7 +45,7 @@ class _AdministrativeWagesState extends State<AdministrativeWages> {
     _loadWages();
   }
 
-  void _editWage(String docId, String employeeName, String department, String date, String wage) async {
+  Future<void> _editWage(String docId, String employeeName, String department, String date, String wage) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -61,7 +61,7 @@ class _AdministrativeWagesState extends State<AdministrativeWages> {
     _loadWages();
   }
 
-  void _deleteWage(String docId) async {
+  Future<void> _deleteWage(String docId) async {
     try {
       await _firestoreServices.deleteWage(docId);
       ScaffoldMessenger.of(context).showSnackBar(

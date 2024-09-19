@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -11,6 +12,7 @@ class CalvingPage extends StatefulWidget {
 
 class _CalvingPageState extends State<CalvingPage> {
   final List<Calf> _calves = [];
+  List<String> _motherNames = [];
 
   @override
   void initState() {
@@ -19,10 +21,20 @@ class _CalvingPageState extends State<CalvingPage> {
   }
 
   Future<void> _fetchCalvesFromFirebase() async {
-    final calfCollection = FirebaseFirestore.instance.collection('calves');
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      _showSnackBar('User not logged in');
+      return;
+    }
+    final cattleCollection = FirebaseFirestore.instance.collection('cattle');
+    final calfCollection = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('calves');
     try {
-      final snapshot = await calfCollection.get();
-      final calvesList = snapshot.docs.map((doc) {
+      // Fetch calves
+      final calfSnapshot = await calfCollection.get();
+      final calvesList = calfSnapshot.docs.map((doc) {
         final data = doc.data();
         return Calf(
           id: doc.id,
@@ -34,14 +46,16 @@ class _CalvingPageState extends State<CalvingPage> {
         );
       }).toList();
 
+      // Fetch cattle names for dropdown
+      final cattleSnapshot = await cattleCollection.where('userId', isEqualTo: uid).get();
+      _motherNames = cattleSnapshot.docs.map((doc) => doc.data()['name'] as String).toList();
+
       setState(() {
         _calves.clear();
         _calves.addAll(calvesList);
       });
     } catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to fetch calf records: $error')),
-      );
+      _showSnackBar('Failed to fetch records: $error');
     }
   }
 
@@ -53,7 +67,16 @@ class _CalvingPageState extends State<CalvingPage> {
   }
 
   void _saveCalfToFirebase(Calf calf) async {
-    final calfCollection = FirebaseFirestore.instance.collection('calves');
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      _showSnackBar('User not logged in');
+      return;
+    }
+
+    final calfCollection = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('calves');
 
     try {
       await calfCollection.add({
@@ -63,19 +86,21 @@ class _CalvingPageState extends State<CalvingPage> {
         'gender': calf.gender,
         'healthStatus': calf.healthStatus,
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Calf record saved successfully!')),
-      );
+      _showSnackBar('Calf record saved successfully!');
     } catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save calf record: $error')),
-      );
+      _showSnackBar('Failed to save calf record: $error');
     }
   }
 
   void _updateCalf(Calf calf) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      _showSnackBar('User not logged in');
+      return;
+    }
+
     final calfDoc =
-        FirebaseFirestore.instance.collection('calves').doc(calf.id);
+        FirebaseFirestore.instance.collection('users').doc(uid).collection('calves').doc(calf.id);
 
     try {
       await calfDoc.update({
@@ -85,30 +110,32 @@ class _CalvingPageState extends State<CalvingPage> {
         'gender': calf.gender,
         'healthStatus': calf.healthStatus,
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Calf record updated successfully!')),
-      );
+      _showSnackBar('Calf record updated successfully!');
       _fetchCalvesFromFirebase(); // Refresh list
     } catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update calf record: $error')),
-      );
+      _showSnackBar('Failed to update calf record: $error');
     }
   }
 
   void _deleteCalf(String calfId) async {
-    final calfDoc = FirebaseFirestore.instance.collection('calves').doc(calfId);
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      _showSnackBar('User not logged in');
+      return;
+    }
+
+    final calfDoc = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('calves')
+        .doc(calfId);
 
     try {
       await calfDoc.delete();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Calf record deleted successfully!')),
-      );
+      _showSnackBar('Calf record deleted successfully!');
       _fetchCalvesFromFirebase(); // Refresh list
     } catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete calf record: $error')),
-      );
+      _showSnackBar('Failed to delete calf record: $error');
     }
   }
 
@@ -379,6 +406,12 @@ class _CalvingPageState extends State<CalvingPage> {
       _deleteCalf(calfId);
     }
   }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
 }
 
 class _CalfForm extends StatefulWidget {
@@ -395,6 +428,7 @@ class __CalfFormState extends State<_CalfForm> {
   final _nameController = TextEditingController();
   final _birthDateController = TextEditingController();
   final _motherController = TextEditingController();
+  String _mother = ''; 
   String _gender = 'Male';
   String _healthStatus = 'Healthy';
 
@@ -413,6 +447,8 @@ class __CalfFormState extends State<_CalfForm> {
 
   @override
   Widget build(BuildContext context) {
+    final calvingPageState = context.findAncestorStateOfType<_CalvingPageState>();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -447,12 +483,23 @@ class __CalfFormState extends State<_CalfForm> {
           },
         ),
         const SizedBox(height: 16.0),
-        TextField(
-          controller: _motherController,
+        DropdownButtonFormField<String>(
+          value: _mother.isNotEmpty ? _mother : null,
           decoration: InputDecoration(
             labelText: 'Mother Name',
             border: OutlineInputBorder(),
           ),
+          items: calvingPageState?._motherNames.map((name) {
+            return DropdownMenuItem<String>(
+              value: name,
+              child: Text(name),
+            );
+          }).toList(),
+          onChanged: (value) {
+            setState(() {
+              _mother = value!;
+            });
+          },
         ),
         const SizedBox(height: 16.0),
         DropdownButtonFormField<String>(
@@ -497,14 +544,13 @@ class __CalfFormState extends State<_CalfForm> {
           onPressed: () {
             if (_nameController.text.isNotEmpty &&
                 _birthDateController.text.isNotEmpty &&
-                _motherController.text.isNotEmpty) {
+                _mother.isNotEmpty) {
               widget.onSubmit(
                 Calf(
                   id: widget.calf?.id ?? '',
                   name: _nameController.text,
-                  birthDate:
-                      DateFormat.yMMMd().parse(_birthDateController.text),
-                  mother: _motherController.text,
+                  birthDate: DateFormat.yMMMd().parse(_birthDateController.text),
+                  mother: _mother,
                   gender: _gender,
                   healthStatus: _healthStatus,
                 ),

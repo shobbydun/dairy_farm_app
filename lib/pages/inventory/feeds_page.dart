@@ -1,7 +1,7 @@
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; 
+import 'package:intl/intl.dart';
 
 class FeedsPage extends StatefulWidget {
   const FeedsPage({super.key});
@@ -22,6 +22,11 @@ class _FeedsPageState extends State<FeedsPage> {
     final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
     _firestoreServices = FirestoreServices(userId);
     _fetchFeeds();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
   }
 
   @override
@@ -45,20 +50,17 @@ class _FeedsPageState extends State<FeedsPage> {
 
   List<Map<String, dynamic>> _filteredFeeds() {
     return _feeds.where((feed) {
-      final nameMatches =
-          (feed['name'] as String).toLowerCase().contains(_searchQuery);
+      final nameMatches = (feed['name'] as String).toLowerCase().contains(_searchQuery);
       return nameMatches;
     }).toList();
   }
 
-  Future<void> _showFeedDialog(
-      {Map<String, dynamic>? feed, bool isEditing = false}) async {
+  Future<void> _showFeedDialog({Map<String, dynamic>? feed, bool isEditing = false}) async {
     final nameController = TextEditingController(text: feed?['name'] ?? '');
-    final supplierController =
-        TextEditingController(text: feed?['supplier'] ?? '');
-    final quantityController =
-        TextEditingController(text: feed?['quantity'] ?? '');
+    final supplierController = TextEditingController(text: feed?['supplier'] ?? '');
+    final quantityController = TextEditingController(text: feed?['quantity'] ?? '');
     final dateController = TextEditingController(text: feed?['date'] ?? '');
+    final costController = TextEditingController(text: (feed?['cost'] ?? '').toString());
 
     final action = isEditing ? 'Update' : 'Add';
 
@@ -117,6 +119,11 @@ class _FeedsPageState extends State<FeedsPage> {
                   ),
                   readOnly: true,
                 ),
+                TextField(
+                  controller: costController,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(labelText: 'Cost'),
+                ),
               ],
             ),
           ),
@@ -133,6 +140,7 @@ class _FeedsPageState extends State<FeedsPage> {
                 final supplier = supplierController.text;
                 final quantity = quantityController.text;
                 final date = dateController.text;
+                final cost = double.tryParse(costController.text) ?? 0.0;
 
                 if (isEditing && feed != null) {
                   await _firestoreServices.updateFeed(feed['id'], {
@@ -140,15 +148,15 @@ class _FeedsPageState extends State<FeedsPage> {
                     'supplier': supplier,
                     'quantity': quantity,
                     'date': date,
+                    'cost': cost,
                   });
                 } else {
-                  await _firestoreServices.addFeed(
-                      name, supplier, quantity, date);
+                  await _firestoreServices.addFeed(name, supplier, quantity, date, cost);
                 }
 
                 Navigator.of(context).pop();
                 if (mounted) {
-                  _fetchFeeds();
+                  _fetchFeeds(); // Refresh data after adding or updating
                 }
               },
               child: Text(action),
@@ -183,7 +191,7 @@ class _FeedsPageState extends State<FeedsPage> {
           IconButton(
             icon: Icon(Icons.add),
             onPressed: () {
-              _showFeedDialog(isEditing: false);
+              _showFeedDialog(isEditing: false); // Open dialog to add a new feed
             },
           ),
         ],
@@ -206,7 +214,7 @@ class _FeedsPageState extends State<FeedsPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 10,),
+            const SizedBox(height: 10),
             Container(
               height: 320,
               padding: const EdgeInsets.all(16.0),
@@ -240,14 +248,15 @@ class _FeedsPageState extends State<FeedsPage> {
                     child: ListTile(
                       title: Text(feed['name']!),
                       subtitle: Text(
-                          'Supplier: ${feed['supplier']}\nQuantity: ${feed['quantity']}\nDate: ${feed['date']}'),
+                        'Supplier: ${feed['supplier']}\nQuantity: ${feed['quantity']}\nDate: ${feed['date']}\nCost: \$${feed['cost'].toStringAsFixed(2)}',
+                      ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
                             icon: Icon(Icons.edit, color: Colors.blue),
                             onPressed: () {
-                              _showFeedDialog(feed: feed, isEditing: true);
+                              _showFeedDialog(feed: feed, isEditing: true); // Open dialog to edit existing feed
                             },
                           ),
                           IconButton(
@@ -276,7 +285,7 @@ class _FeedsPageState extends State<FeedsPage> {
                               if (confirm) {
                                 await _firestoreServices.deleteFeed(feed['id']);
                                 if (mounted) {
-                                  _fetchFeeds();
+                                  _fetchFeeds(); // Refresh data after deletion
                                 }
                               }
                             },
@@ -288,40 +297,21 @@ class _FeedsPageState extends State<FeedsPage> {
                 }).toList(),
               ),
             ),
-            SizedBox(height: 16),
           ],
         ),
       ),
     );
   }
 
-  // method search bar
   Widget _buildSearchBar() {
-    return Container(
-      width: double.infinity,
-      height: 50,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(25),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.lightBlueAccent.withOpacity(0.8),
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: TextField(
         controller: _searchController,
-        onChanged: (query) {
-          setState(() {
-            _searchQuery = query.toLowerCase();
-          });
-        },
         decoration: InputDecoration(
-          border: InputBorder.none,
-          hintText: 'Search Feed',
-          prefixIcon: Icon(Icons.search, color: Colors.grey),
+          labelText: 'Search by feed name',
+          border: OutlineInputBorder(),
+          prefixIcon: Icon(Icons.search),
         ),
       ),
     );

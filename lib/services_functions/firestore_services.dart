@@ -111,7 +111,7 @@ class FirestoreServices extends ChangeNotifier {
 
   // Add a machinery record
   Future<void> addMachinery(
-      String name, String type, String condition, String dateAcquired) async {
+      String name, String type, String condition, String dateAcquired, double buyCost, double maintenanceCost) async {
     try {
       await _db.collection('machinery').add({
         'userId': userId,
@@ -119,6 +119,8 @@ class FirestoreServices extends ChangeNotifier {
         'type': type,
         'condition': condition,
         'dateAcquired': dateAcquired,
+        'buyCost': buyCost,
+        'maintenanceCost': maintenanceCost,
       });
     } catch (e) {
       print('Error adding machinery record: $e');
@@ -147,8 +149,7 @@ class FirestoreServices extends ChangeNotifier {
   // Delete a machinery record
   Future<void> deleteMachinery(String machineryId) async {
     try {
-      final docSnapshot =
-          await _db.collection('machinery').doc(machineryId).get();
+      final docSnapshot = await _db.collection('machinery').doc(machineryId).get();
       final data = docSnapshot.data();
 
       if (docSnapshot.exists && data != null && data['userId'] == userId) {
@@ -166,8 +167,7 @@ class FirestoreServices extends ChangeNotifier {
   Future<void> updateMachinery(
       String machineryId, Map<String, dynamic> updates) async {
     try {
-      final docSnapshot =
-          await _db.collection('machinery').doc(machineryId).get();
+      final docSnapshot = await _db.collection('machinery').doc(machineryId).get();
       final data = docSnapshot.data();
 
       if (docSnapshot.exists && data != null && data['userId'] == userId) {
@@ -183,7 +183,7 @@ class FirestoreServices extends ChangeNotifier {
 
   // Add a feed record
   Future<void> addFeed(
-      String name, String supplier, String quantity, String date) async {
+      String name, String supplier, String quantity, String date, double cost) async {
     try {
       await _db.collection('feeds').add({
         'userId': userId,
@@ -191,6 +191,7 @@ class FirestoreServices extends ChangeNotifier {
         'supplier': supplier,
         'quantity': quantity,
         'date': date,
+        'cost': cost,
       });
     } catch (e) {
       print('Error adding feed record: $e');
@@ -252,7 +253,7 @@ class FirestoreServices extends ChangeNotifier {
 
   // Method to add a medicine record
   Future<void> addMedicine(
-      String name, String quantity, String expiryDate, String supplier) async {
+      String name, String quantity, String expiryDate, String supplier, double cost) async {
     try {
       await _db.collection('medicines').add({
         'userId': userId,
@@ -260,6 +261,7 @@ class FirestoreServices extends ChangeNotifier {
         'quantity': quantity,
         'expiryDate': expiryDate,
         'supplier': supplier,
+        'cost': cost,
       });
     } catch (e) {
       print('Error adding medicine: $e');
@@ -288,8 +290,7 @@ class FirestoreServices extends ChangeNotifier {
   // Method to delete a medicine record
   Future<void> deleteMedicine(String medicineId) async {
     try {
-      final docSnapshot =
-          await _db.collection('medicines').doc(medicineId).get();
+      final docSnapshot = await _db.collection('medicines').doc(medicineId).get();
       final data = docSnapshot.data();
 
       if (docSnapshot.exists && data != null && data['userId'] == userId) {
@@ -307,8 +308,7 @@ class FirestoreServices extends ChangeNotifier {
   Future<void> updateMedicine(
       String medicineId, Map<String, dynamic> updates) async {
     try {
-      final docSnapshot =
-          await _db.collection('medicines').doc(medicineId).get();
+      final docSnapshot = await _db.collection('medicines').doc(medicineId).get();
       final data = docSnapshot.data();
 
       if (docSnapshot.exists && data != null && data['userId'] == userId) {
@@ -325,18 +325,17 @@ class FirestoreServices extends ChangeNotifier {
   // Method to fetch user profile details
   Future<Map<String, dynamic>?> getProfile() async {
     try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId != null) {
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId)
-            .get();
-        return doc.data();
+      if (userId.isEmpty) {
+        print("User ID is empty.");
+        return null;
       }
+
+      final doc = await _db.collection('users').doc(userId).get();
+      return doc.data();
     } catch (e) {
       print("Error fetching profile: $e");
+      return null;
     }
-    return null;
   }
 
   // Method to update user profile details
@@ -348,7 +347,7 @@ class FirestoreServices extends ChangeNotifier {
       }
 
       await _db.collection('users').doc(userId).update(updates);
-       // Notify listeners that the profile has been updated
+      // Notify listeners that the profile has been updated
       notifyListeners();
     } catch (e) {
       print("Error updating profile: $e");
@@ -400,7 +399,7 @@ class FirestoreServices extends ChangeNotifier {
   // Method to upload profile image
   Future<String?> uploadProfileImage(File image) async {
     try {
-      final storageRef = FirebaseStorage.instance
+      final storageRef = _storage
           .ref()
           .child('profile_images')
           .child(DateTime.now().toString() + '.jpg');
@@ -432,19 +431,32 @@ class FirestoreServices extends ChangeNotifier {
   // Method to update the profile image URL
   Future<void> updateProfileImageUrl(String imageUrl) async {
     try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId != null) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId)
-            .update({
-          'profileImage': imageUrl,
-        });
+      if (userId.isEmpty) {
+        print("User ID is empty.");
+        return;
       }
+
+      await _db.collection('users').doc(userId).update({
+        'profileImage': imageUrl,
+      });
     } catch (e) {
       print("Error updating profile image URL: $e");
     }
   }
 
-  
+  // Method to fetch a single medicine by its ID
+Future<Map<String, dynamic>?> getMedicine(String medicineId) async {
+  try {
+    final docSnapshot = await _db.collection('medicines').doc(medicineId).get();
+    if (docSnapshot.exists) {
+      return {'id': docSnapshot.id, ...docSnapshot.data()!};
+    } else {
+      print('Medicine not found');
+      return null;
+    }
+  } catch (e) {
+    print('Error fetching medicine: $e');
+    return null;
+  }
+}
 }

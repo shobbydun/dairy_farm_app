@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -18,10 +19,50 @@ class _TreatmentPageState extends State<TreatmentPage> {
   int ongoingCount = 0;
   int completedCount = 0;
 
+  late CollectionReference _treatmentCollection;
+
   @override
   void initState() {
     super.initState();
+    _initializeCollection();
+    _fetchCattleNames();
     _updateCounts();
+  }
+
+  List<String> cattleNames = [];
+
+void _fetchCattleNames() async {
+  final user = FirebaseAuth.instance.currentUser;
+  QuerySnapshot snapshot;
+
+  if (user != null) {
+    snapshot = await FirebaseFirestore.instance
+        .collection('cattle')
+        .where('userId', isEqualTo: user.uid)
+        .get();
+  } else {
+    // Handle case when user is not logged in
+    snapshot = await FirebaseFirestore.instance.collection('cattle').get();
+  }
+
+  setState(() {
+    cattleNames = snapshot.docs.map((doc) => doc['name'] as String).toList();
+  });
+}
+
+  
+
+  void _initializeCollection() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _treatmentCollection = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('treatments');
+    } else {
+      // Handle case when user is not logged in
+      _treatmentCollection = FirebaseFirestore.instance.collection('treatments');
+    }
   }
 
   void _selectDate(BuildContext context) async {
@@ -38,79 +79,103 @@ class _TreatmentPageState extends State<TreatmentPage> {
       });
     }
   }
+  
+ String? selectedCattleName;
 
-  void _showAddTreatmentModal(BuildContext context) {
-    _dateController.clear();
-    _doctorController.clear();
-    _drugController.clear();
-    _diseaseController.clear();
-    _notesController.clear();
+void _showAddTreatmentModal(BuildContext context) {
+  _dateController.clear();
+  _doctorController.clear();
+  _drugController.clear();
+  _diseaseController.clear();
+  _notesController.clear();
+  selectedCattleName = null; // Reset selected cattle name
 
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Add New Treatment',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+  showModalBottomSheet(
+    context: context,
+    builder: (BuildContext context) {
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Add New Treatment',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 16.0),
+            // Dropdown for selecting cattle
+            DropdownButton<String>(
+              hint: Text('Select Cattle being Treated'),
+              value: selectedCattleName,
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedCattleName = newValue;
+                });
+              },
+              items: cattleNames.map<DropdownMenuItem<String>>((String name) {
+                return DropdownMenuItem<String>(
+                  value: name,
+                  child: Text(name),
+                );
+              }).toList(),
+            ),
+            TextField(
+              controller: _doctorController,
+              decoration: InputDecoration(
+                labelText: 'Veterinary Doctor\'s Name',
+              ),
+            ),
+            TextField(
+              controller: _dateController,
+              decoration: InputDecoration(
+                labelText: 'Date of Treatment',
+                suffixIcon: IconButton(
+                  icon: Icon(Icons.calendar_today),
+                  onPressed: () => _selectDate(context),
                 ),
               ),
-              SizedBox(height: 16.0),
-              TextField(
-                controller: _doctorController,
-                decoration: InputDecoration(
-                  labelText: 'Veterinary Doctor\'s Name',
-                ),
+              readOnly: true,
+            ),
+            TextField(
+              controller: _drugController,
+              decoration: InputDecoration(
+                labelText: 'Drug Used',
               ),
-              TextField(
-                controller: _dateController,
-                decoration: InputDecoration(
-                  labelText: 'Date of Treatment',
-                  suffixIcon: IconButton(
-                    icon: Icon(Icons.calendar_today),
-                    onPressed: () => _selectDate(context),
-                  ),
-                ),
-                readOnly: true,
+            ),
+            TextField(
+              controller: _diseaseController,
+              decoration: InputDecoration(
+                labelText: 'Disease Being Treated',
               ),
-              TextField(
-                controller: _drugController,
-                decoration: InputDecoration(
-                  labelText: 'Drug Used',
-                ),
+            ),
+            TextField(
+              controller: _notesController,
+              decoration: InputDecoration(
+                labelText: 'Notes',
               ),
-              TextField(
-                controller: _diseaseController,
-                decoration: InputDecoration(
-                  labelText: 'Disease Being Treated',
-                ),
-              ),
-              TextField(
-                controller: _notesController,
-                decoration: InputDecoration(
-                  labelText: 'Notes',
-                ),
-              ),
-              SizedBox(height: 16.0),
-              ElevatedButton(
-                onPressed: () {
+            ),
+            SizedBox(height: 16.0),
+            ElevatedButton(
+              onPressed: () {
+                if (selectedCattleName != null) {
                   _addTreatmentToFirebase();
                   Navigator.pop(context);
-                },
-                child: Text('Submit'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+                } else {
+                  print('Please select a cattle');
+                }
+              },
+              child: Text('Submit'),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 
   void _showEditTreatmentModal(BuildContext context, Map<String, dynamic> treatment) {
     _dateController.text = treatment['date'];
@@ -185,30 +250,32 @@ class _TreatmentPageState extends State<TreatmentPage> {
     );
   }
 
-  void _addTreatmentToFirebase() {
-    if (_doctorController.text.isNotEmpty &&
-        _dateController.text.isNotEmpty &&
-        _drugController.text.isNotEmpty &&
-        _diseaseController.text.isNotEmpty &&
-        _notesController.text.isNotEmpty) {
-      
-      FirebaseFirestore.instance.collection('treatments').add({
-        'doctor': _doctorController.text,
-        'date': _dateController.text,
-        'drug': _drugController.text,
-        'disease': _diseaseController.text,
-        'notes': _notesController.text,
-        'status': 'ongoing', 
-      }).then((value) {
-        print('Treatment Added');
-        _updateCounts(); 
-      }).catchError((error) {
-        print('Failed to add treatment: $error');
-      });
-    } else {
-      print('Please fill all fields');
-    }
+ void _addTreatmentToFirebase() {
+  if (_doctorController.text.isNotEmpty &&
+      _dateController.text.isNotEmpty &&
+      _drugController.text.isNotEmpty &&
+      _diseaseController.text.isNotEmpty &&
+      _notesController.text.isNotEmpty &&
+      selectedCattleName != null) { // Ensure cattle is selected
+    
+    _treatmentCollection.add({
+      'doctor': _doctorController.text,
+      'date': _dateController.text,
+      'drug': _drugController.text,
+      'disease': _diseaseController.text,
+      'notes': _notesController.text,
+      'cattleName': selectedCattleName, // Add the selected cattle name
+      'status': 'ongoing',
+    }).then((value) {
+      print('Treatment Added');
+      _updateCounts();
+    }).catchError((error) {
+      print('Failed to add treatment: $error');
+    });
+  } else {
+    print('Please fill all fields and select a cattle');
   }
+}
 
   void _updateTreatmentInFirebase(String id) {
     if (_doctorController.text.isNotEmpty &&
@@ -217,7 +284,7 @@ class _TreatmentPageState extends State<TreatmentPage> {
         _diseaseController.text.isNotEmpty &&
         _notesController.text.isNotEmpty) {
       
-      FirebaseFirestore.instance.collection('treatments').doc(id).update({
+      _treatmentCollection.doc(id).update({
         'doctor': _doctorController.text,
         'date': _dateController.text,
         'drug': _drugController.text,
@@ -239,7 +306,7 @@ class _TreatmentPageState extends State<TreatmentPage> {
 
     if (confirmDelete == true) {
       try {
-        await FirebaseFirestore.instance.collection('treatments').doc(id).delete();
+        await _treatmentCollection.doc(id).delete();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Treatment deleted successfully.'),
@@ -286,19 +353,20 @@ class _TreatmentPageState extends State<TreatmentPage> {
   }
 
   Stream<List<Map<String, dynamic>>> _streamTreatments() {
-    return FirebaseFirestore.instance
-        .collection('treatments')
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => {...doc.data(), 'id': doc.id})
-            .toList());
+    return _treatmentCollection.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>?; // Explicitly cast to Map<String, dynamic>
+        if (data != null) {
+          return {...data, 'id': doc.id};
+        } else {
+          return {'id': doc.id}; 
+        }
+      }).toList();
+    });
   }
 
   void _updateCounts() {
-    FirebaseFirestore.instance
-        .collection('treatments')
-        .get()
-        .then((snapshot) {
+    _treatmentCollection.get().then((snapshot) {
       int ongoing = 0;
       int completed = 0;
       
@@ -339,6 +407,7 @@ class _TreatmentPageState extends State<TreatmentPage> {
               ),
               SizedBox(height: 16.0),
               ElevatedButton(
+                
                 onPressed: () => _showAddTreatmentModal(context),
                 child: Text('Add Treatment'),
               ),
@@ -389,14 +458,11 @@ class _TreatmentPageState extends State<TreatmentPage> {
                         leading: Checkbox(
                           value: treatment['status'] == 'completed',
                           onChanged: (bool? checked) {
-                            FirebaseFirestore.instance
-                                .collection('treatments')
-                                .doc(treatment['id'])
-                                .update({
-                                  'status': checked! ? 'completed' : 'ongoing'
-                                }).then((_) {
-                                  _updateCounts(); // Refresh counts after updating status
-                                });
+                            _treatmentCollection.doc(treatment['id']).update({
+                              'status': checked! ? 'completed' : 'ongoing'
+                            }).then((_) {
+                              _updateCounts(); // Refresh counts after updating status
+                            });
                           },
                         ),
                       );

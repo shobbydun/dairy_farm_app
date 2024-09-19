@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class MiscarriagePage extends StatefulWidget {
@@ -7,14 +8,52 @@ class MiscarriagePage extends StatefulWidget {
 }
 
 class _MiscarriagePageState extends State<MiscarriagePage> {
-  final _cattleIdController = TextEditingController();
   final _dateController = TextEditingController();
   final _notesController = TextEditingController();
   bool _isFormVisible = false;
   String? _editingRecordId;
+  String? _selectedCattleId; // To hold the selected cattle ID
+  List<String> _cattleList = []; // To hold the cattle names
 
-  final CollectionReference _miscarriageCollection =
-      FirebaseFirestore.instance.collection('miscarriage_records');
+  late final CollectionReference _miscarriageCollection;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeCollection();
+    _fetchCattleNames(); // Fetch cattle names when the page is initialized
+  }
+
+  void _initializeCollection() {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('User not logged in.')),
+      );
+      return;
+    }
+    _miscarriageCollection = FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('miscarriage_records');
+  }
+
+ void _fetchCattleNames() async {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) {
+    throw Exception('User not logged in');
+  }
+
+  final snapshot = await FirebaseFirestore.instance
+      .collection('cattle')
+      .where('userId', isEqualTo: uid)
+      .get();
+
+  setState(() {
+    _cattleList = snapshot.docs.map((doc) => doc.data()['name'] as String).toList();
+  });
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -111,11 +150,22 @@ class _MiscarriagePageState extends State<MiscarriagePage> {
   Widget _buildMiscarriageForm() {
     return Column(
       children: [
-        // Cattle Serial Number
-        TextFormField(
-          controller: _cattleIdController,
+        // Cattle Selection
+        DropdownButtonFormField<String>(
+          value: _selectedCattleId,
+          hint: Text('Select Cattle'),
+          onChanged: (newValue) {
+            setState(() {
+              _selectedCattleId = newValue;
+            });
+          },
+          items: _cattleList.map((cattleName) {
+            return DropdownMenuItem<String>(
+              value: cattleName,
+              child: Text(cattleName),
+            );
+          }).toList(),
           decoration: InputDecoration(
-            labelText: 'Select Cattle',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
             ),
@@ -238,11 +288,11 @@ class _MiscarriagePageState extends State<MiscarriagePage> {
   }
 
   void _submitForm() async {
-    final cattleId = _cattleIdController.text;
+    final cattleId = _selectedCattleId;
     final date = _dateController.text;
     final notes = _notesController.text;
 
-    if (cattleId.isEmpty || date.isEmpty) {
+    if (cattleId == null || date.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please fill in all required fields')),
       );
@@ -281,7 +331,7 @@ class _MiscarriagePageState extends State<MiscarriagePage> {
   }
 
   void _clearForm() {
-    _cattleIdController.clear();
+    _selectedCattleId = null; // Clear selected cattle
     _dateController.clear();
     _notesController.clear();
   }
@@ -289,7 +339,7 @@ class _MiscarriagePageState extends State<MiscarriagePage> {
   void _confirmDeleteRecord(String id) async {
     final confirm = await showDialog<bool>(
       context: context,
-      barrierDismissible: false, // Prevent dismissing by tapping outside
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: Text('Confirm Delete'),
         content: Text('Are you sure you want to delete this record?'),
@@ -326,7 +376,7 @@ class _MiscarriagePageState extends State<MiscarriagePage> {
 
   void _showEditForm(String id, Map<String, dynamic> data) {
     setState(() {
-      _cattleIdController.text = data['cattleId'] ?? '';
+      _selectedCattleId = data['cattleId'] ?? ''; // Populate selected cattle
       _dateController.text = data['date'] ?? '';
       _notesController.text = data['notes'] ?? '';
       _editingRecordId = id;

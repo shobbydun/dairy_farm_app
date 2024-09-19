@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class PregnancyPage extends StatefulWidget {
@@ -7,12 +8,56 @@ class PregnancyPage extends StatefulWidget {
 }
 
 class _PregnancyPageState extends State<PregnancyPage> {
-  final TextEditingController _cattleIdController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _costController = TextEditingController();
   DateTime? _dateOfDetection;
   DateTime? _expectedDateOfBirth;
   String? _editDocId;
+  String? _selectedCattleName;
+  List<String> _cattleNames = [];
+  late CollectionReference _pregnancyCollection;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeCollection();
+    _fetchCattleNames();
+  }
+
+  void _initializeCollection() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _pregnancyCollection = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('pregnancy_records');
+    } else {
+      _pregnancyCollection = FirebaseFirestore.instance.collection('pregnancy_records');
+    }
+  }
+
+Future<void> _fetchCattleNames() async {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  QuerySnapshot snapshot;
+
+  if (uid != null) {
+    snapshot = await FirebaseFirestore.instance
+        .collection('cattle')
+        .where('userId', isEqualTo: uid)
+        .get();
+  } else {
+    throw Exception('User not logged in');
+  }
+
+  setState(() {
+    _cattleNames = snapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>?; 
+      return data?['name'] as String? ?? ''; 
+    }).toList();
+  });
+}
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +72,7 @@ class _PregnancyPageState extends State<PregnancyPage> {
           child: Column(
             children: [
               _buildPregnancyCard(context),
-              const SizedBox(height: 16.0), 
+              const SizedBox(height: 16.0),
               _buildPregnancyListSection(),
             ],
           ),
@@ -132,25 +177,25 @@ class _PregnancyPageState extends State<PregnancyPage> {
             ),
             const SizedBox(height: 8.0),
             StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('pregnancy_records').snapshots(),
+              stream: _pregnancyCollection.snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return Center(child: Text('No Records Found'));
                 }
 
                 return SizedBox(
-                  height: 400, 
+                  height: 400,
                   child: ListView.builder(
                     shrinkWrap: true,
                     itemCount: snapshot.data!.docs.length,
                     itemBuilder: (context, index) {
                       final doc = snapshot.data!.docs[index];
                       final data = doc.data() as Map<String, dynamic>;
-                      final cattleId = data['cattle_id'] ?? 'N/A';
+                      final cattleName = data['cattle_name'] ?? 'N/A';
                       final dateOfDetection = (data['date_of_detection'] as Timestamp).toDate();
                       final expectedDateOfBirth = (data['expected_date_of_birth'] as Timestamp).toDate();
 
-                      return _buildRecordCard(doc.id, cattleId, dateOfDetection, expectedDateOfBirth, data);
+                      return _buildRecordCard(doc.id, cattleName, dateOfDetection, expectedDateOfBirth, data);
                     },
                   ),
                 );
@@ -162,7 +207,7 @@ class _PregnancyPageState extends State<PregnancyPage> {
     );
   }
 
-  Widget _buildRecordCard(String docId, String cattleId, DateTime dateOfDetection, DateTime expectedDateOfBirth, Map<String, dynamic> data) {
+  Widget _buildRecordCard(String docId, String cattleName, DateTime dateOfDetection, DateTime expectedDateOfBirth, Map<String, dynamic> data) {
     return Card(
       color: Colors.white,
       elevation: 4.0,
@@ -176,7 +221,7 @@ class _PregnancyPageState extends State<PregnancyPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Cattle ID: $cattleId',
+              'Cattle Name: $cattleName',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 4.0),
@@ -215,14 +260,14 @@ class _PregnancyPageState extends State<PregnancyPage> {
 
   void _showPregnancyModal(BuildContext context, [String? docId, Map<String, dynamic>? data]) {
     if (data != null) {
-      _cattleIdController.text = data['cattle_id'] ?? '';
+      _selectedCattleName = data['cattle_name'] ?? '';
       _dateOfDetection = (data['date_of_detection'] as Timestamp).toDate();
       _expectedDateOfBirth = (data['expected_date_of_birth'] as Timestamp).toDate();
       _notesController.text = data['notes'] ?? '';
       _costController.text = data['cost'] ?? '';
       _editDocId = docId;
     } else {
-      _cattleIdController.clear();
+      _selectedCattleName = null;
       _notesController.clear();
       _costController.clear();
       _dateOfDetection = null;
@@ -238,7 +283,7 @@ class _PregnancyPageState extends State<PregnancyPage> {
           content: SingleChildScrollView(
             child: Column(
               children: [
-                _buildTextField('Cattle ID', TextInputType.number, _cattleIdController),
+                _buildCattleDropdown(),
                 _buildDatePickerField(context, 'Date of Detection', (date) {
                   setState(() {
                     _dateOfDetection = date;
@@ -265,13 +310,13 @@ class _PregnancyPageState extends State<PregnancyPage> {
               child: Text(docId == null ? 'Submit' : 'Save Changes',
                   style: TextStyle(color: Colors.lightBlueAccent)),
               onPressed: () async {
-                if (_cattleIdController.text.isNotEmpty &&
+                if (_selectedCattleName != null &&
                     _dateOfDetection != null &&
                     _expectedDateOfBirth != null) {
                   if (docId == null) {
                     // Add new record
-                    await FirebaseFirestore.instance.collection('pregnancy_records').add({
-                      'cattle_id': _cattleIdController.text,
+                    await _pregnancyCollection.add({
+                      'cattle_name': _selectedCattleName,
                       'date_of_detection': _dateOfDetection,
                       'expected_date_of_birth': _expectedDateOfBirth,
                       'notes': _notesController.text,
@@ -279,8 +324,8 @@ class _PregnancyPageState extends State<PregnancyPage> {
                     });
                   } else {
                     // Update existing record
-                    await FirebaseFirestore.instance.collection('pregnancy_records').doc(docId).update({
-                      'cattle_id': _cattleIdController.text,
+                    await _pregnancyCollection.doc(docId).update({
+                      'cattle_name': _selectedCattleName,
                       'date_of_detection': _dateOfDetection,
                       'expected_date_of_birth': _expectedDateOfBirth,
                       'notes': _notesController.text,
@@ -295,6 +340,31 @@ class _PregnancyPageState extends State<PregnancyPage> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildCattleDropdown() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: DropdownButtonFormField<String>(
+        value: _selectedCattleName,
+        decoration: InputDecoration(
+          labelText: 'Select Cattle',
+          border: OutlineInputBorder(),
+        ),
+        items: _cattleNames.map((name) {
+          return DropdownMenuItem(
+            value: name,
+            child: Text(name),
+          );
+        }).toList(),
+        onChanged: (value) {
+          setState(() {
+            _selectedCattleName = value;
+          });
+        },
+        validator: (value) => value == null ? 'Please select a cattle' : null,
+      ),
     );
   }
 
@@ -357,7 +427,7 @@ class _PregnancyPageState extends State<PregnancyPage> {
             TextButton(
               child: Text('Delete', style: TextStyle(color: Colors.lightBlueAccent)),
               onPressed: () async {
-                await FirebaseFirestore.instance.collection('pregnancy_records').doc(docId).delete();
+                await _pregnancyCollection.doc(docId).delete();
                 Navigator.of(context).pop();
               },
             ),

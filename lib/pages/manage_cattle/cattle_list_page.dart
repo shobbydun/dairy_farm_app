@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -27,6 +28,8 @@ class _CattleListState extends State<CattleList> {
 
   @override
   Widget build(BuildContext context) {
+    final userId = FirebaseAuth.instance.currentUser?.uid; 
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Cattle List'),
@@ -52,11 +55,12 @@ class _CattleListState extends State<CattleList> {
         ),
       ),
       body: Container(
-        color: Colors.grey[200], 
+        color: Colors.grey[200],
         child: StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
               .collection('cattle')
-              .orderBy('createdAt', descending: true) 
+              .where('userId', isEqualTo: userId) // Filter by user ID
+              .orderBy('createdAt', descending: true)
               .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -76,20 +80,20 @@ class _CattleListState extends State<CattleList> {
             }).toList();
 
             return ListView.builder(
-              padding: const EdgeInsets.all(8.0), 
+              padding: const EdgeInsets.all(8.0),
               itemCount: filteredCattleDocs.length,
               itemBuilder: (context, index) {
                 var cattleData = filteredCattleDocs[index].data() as Map<String, dynamic>;
                 var createdAt = cattleData['createdAt'] as Timestamp?;
                 var timestamp = createdAt != null
                     ? DateFormat('yyyy-MM-dd HH:mm:ss').format(createdAt.toDate())
-                    : 'NA'; 
+                    : 'NA';
 
                 return Card(
-                  elevation: 5, 
+                  elevation: 5,
                   margin: const EdgeInsets.symmetric(vertical: 8.0),
                   child: ListTile(
-                    contentPadding: const EdgeInsets.all(16.0), 
+                    contentPadding: const EdgeInsets.all(16.0),
                     leading: CircleAvatar(
                       backgroundImage: cattleData['imageUrl'] != null
                           ? NetworkImage(cattleData['imageUrl'])
@@ -97,7 +101,7 @@ class _CattleListState extends State<CattleList> {
                       child: cattleData['imageUrl'] == null
                           ? const Icon(Icons.pets, size: 40, color: Colors.white)
                           : null,
-                      backgroundColor: Colors.grey[400], 
+                      backgroundColor: Colors.grey[400],
                     ),
                     title: Text(
                       cattleData['name'] ?? 'No Name',
@@ -107,7 +111,7 @@ class _CattleListState extends State<CattleList> {
                       'Breed: ${cattleData['breed']}\nAdded on: $timestamp',
                       style: const TextStyle(fontSize: 14),
                     ),
-                    trailing: const Icon(Icons.arrow_forward_ios, color: Colors.blue), 
+                    trailing: const Icon(Icons.arrow_forward_ios, color: Colors.blue),
                     onTap: () {
                       Navigator.push(
                         context,

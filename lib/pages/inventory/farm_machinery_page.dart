@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:dairy_harbor/components/inventory_components/add_machinery_page.dart';
 import 'package:dairy_harbor/components/inventory_components/edit_machinery_page.dart';
 import 'package:dairy_harbor/components/inventory_components/machinery_details_page.dart';
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 class FarmMachineryPage extends StatefulWidget {
   const FarmMachineryPage({super.key});
@@ -25,6 +25,11 @@ class _FarmMachineryPageState extends State<FarmMachineryPage> {
     final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
     _firestoreServices = FirestoreServices(userId);
     _fetchMachineries();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
   }
 
   Future<void> _fetchMachineries() async {
@@ -73,11 +78,6 @@ class _FarmMachineryPageState extends State<FarmMachineryPage> {
                 Expanded(
                   child: TextField(
                     controller: _searchController,
-                    onChanged: (query) {
-                      setState(() {
-                        _searchQuery = query.toLowerCase();
-                      });
-                    },
                     decoration: InputDecoration(
                       labelText: 'Search Machinery',
                       border: OutlineInputBorder(),
@@ -126,7 +126,7 @@ class _FarmMachineryPageState extends State<FarmMachineryPage> {
                         color: Colors.blueAccent.withOpacity(0.2),
                         spreadRadius: 2,
                         blurRadius: 6,
-                        offset: Offset(0, 3), 
+                        offset: Offset(0, 3),
                       ),
                     ],
                   ),
@@ -134,7 +134,7 @@ class _FarmMachineryPageState extends State<FarmMachineryPage> {
                     leading: Icon(Icons.category, color: Colors.blueAccent),
                     title: Text(machinery['name']!),
                     subtitle: Text(
-                      'Type: ${machinery['type']}\nCondition: ${machinery['condition']}\nDate Acquired: ${machinery['dateAcquired']}',
+                      'Type: ${machinery['type']}\nCondition: ${machinery['condition']}\nDate Acquired: ${machinery['dateAcquired']}\nPurchase Cost: \nKshs ${machinery['buyCost']}\nMaintenance Cost: \nKshs ${machinery['maintenanceCost']}',
                       style: TextStyle(color: Colors.black54),
                     ),
                     trailing: Row(
@@ -152,9 +152,11 @@ class _FarmMachineryPageState extends State<FarmMachineryPage> {
                                   machineryType: machinery['type']!,
                                   machineryCondition: machinery['condition']!,
                                   dateAcquired: machinery['dateAcquired']!,
+                                  buyCost: machinery['buyCost'],
+                                  maintenanceCost: machinery['maintenanceCost'],
                                 ),
                               ),
-                            ).then((_) => _fetchMachineries()); // Refresh data after editing
+                            ).then((_) => _fetchMachineries()); // Refresh data after viewing details
                           },
                         ),
                         IconButton(
@@ -169,6 +171,8 @@ class _FarmMachineryPageState extends State<FarmMachineryPage> {
                                   machineryType: machinery['type']!,
                                   machineryCondition: machinery['condition']!,
                                   dateAcquired: machinery['dateAcquired']!,
+                                  buyCost: machinery['buyCost'],
+                                  maintenanceCost: machinery['maintenanceCost'],
                                 ),
                               ),
                             ).then((_) => _fetchMachineries()); // Refresh data after editing
