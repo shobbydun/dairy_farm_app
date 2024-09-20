@@ -337,7 +337,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
                   ),
                   _buildExpandableMenuItem(
                     icon: Icons.work,
-                    text: 'Workers',
+                    text: 'Employees',
                     isExpanded: isWorkersExpanded,
                     onTap: () {
                       setState(() {
@@ -346,17 +346,10 @@ class _SidebarMenuState extends State<SidebarMenu> {
                     },
                     children: [
                       _buildSubMenuItem(
-                        text: 'Worker List',
+                        text: 'My Employees',
                         onTap: () {
                           Navigator.pop(context);
                           Navigator.pushNamed(context, '/workerList');
-                        },
-                      ),
-                      _buildSubMenuItem(
-                        text: 'Worker Profile',
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.pushNamed(context, '/workerProfile');
                         },
                       ),
                     ],

@@ -1,10 +1,20 @@
+buildscript {
+    ext.kotlin_version = '1.9.10'
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "com.android.tools.build:gradle:8.1.1" 
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "com.google.gms:google-services:4.3.15" 
+    }
+}
+
 plugins {
     id "com.android.application"
-    // START: FlutterFire Configuration
     id 'com.google.gms.google-services'
-    // END: FlutterFire Configuration
-    id "kotlin-android"
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "kotlin-android" version "$kotlin_version" 
     id "dev.flutter.flutter-gradle-plugin"
 }
 
@@ -22,18 +32,16 @@ android {
         jvmTarget = JavaVersion.VERSION_1_8
     }
 
-defaultConfig {
-    applicationId = "com.example.dairy_harbor"
-    minSdkVersion 23
-    targetSdkVersion 30 // or your current targetSdkVersion
-    versionCode flutter.versionCode
-    versionName flutter.versionName
-}
+    defaultConfig {
+        applicationId = "com.example.dairy_harbor"
+        minSdkVersion 23
+        targetSdkVersion 34
+        versionCode flutter.versionCode
+        versionName flutter.versionName
+    }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.debug
         }
     }

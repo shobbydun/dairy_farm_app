@@ -248,7 +248,7 @@ class _FeedsPageState extends State<FeedsPage> {
                     child: ListTile(
                       title: Text(feed['name']!),
                       subtitle: Text(
-                        'Supplier: ${feed['supplier']}\nQuantity: ${feed['quantity']}\nDate: ${feed['date']}\nCost: \$${feed['cost'].toStringAsFixed(2)}',
+                        'Supplier: ${feed['supplier']}\nQuantity: ${feed['quantity']}\nDate: ${feed['date']}\nCost: \Kshs${feed['cost'].toStringAsFixed(2)}',
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
