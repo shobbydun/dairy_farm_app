@@ -28,6 +28,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  animated_text_kit: ^4.2.2
   cloud_firestore: ^5.2.1
   cupertino_icons: ^1.0.8
   echart_flutter: ^0.1.0+2
@@ -43,8 +44,13 @@ dependencies:
   image: ^4.2.0
   image_picker: ^1.1.2
   intl: ^0.19.0
+  open_file: ^3.5.4
+  path_provider: ^2.1.4
+  pdf: ^3.11.1
   provider: ^6.1.2
   sign_in_with_apple: ^6.1.1
+  smooth_page_indicator: ^1.2.0+3
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_lints: ^4.0.0

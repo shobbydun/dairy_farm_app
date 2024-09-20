@@ -164,7 +164,18 @@ class MyApp extends StatelessWidget {
           case '/workerList':
             return MaterialPageRoute(builder: (context) => WorkerListPage());
           case '/workerProfile':
-            return MaterialPageRoute(builder: (context) => WorkerProfilePage());
+            final args =
+                settings.arguments as Map<String, dynamic>?; 
+            final workerId =
+                args?['workerId'] as String?;
+            if (workerId == null) {
+              return MaterialPageRoute(
+                  builder: (context) =>
+                      AuthPage());
+            }
+            return MaterialPageRoute(
+                builder: (context) => WorkerProfilePage(workerId: workerId));
+
           case '/editProfile':
             return MaterialPageRoute(builder: (context) => EditProfilePage());
           case '/CattlePage':
@@ -172,8 +183,7 @@ class MyApp extends StatelessWidget {
           case '/cattleProfile':
             final args = settings.arguments as Map<String, dynamic>?;
             final cattleId = args?['cattleId'] as String?;
-            final index =
-                args?['index'] as int? ?? 0;
+            final index = args?['index'] as int? ?? 0;
             if (cattleId == null) {
               return MaterialPageRoute(builder: (context) => AuthPage());
             }
