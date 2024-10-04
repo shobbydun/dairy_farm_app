@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -8,7 +7,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 class CattleForm extends StatefulWidget {
-  const CattleForm({super.key});
+  final Future<String?> adminEmailFuture;
+
+  const CattleForm({Key? key, required this.adminEmailFuture}) : super(key: key);
 
   @override
   _CattleFormState createState() => _CattleFormState();
@@ -27,6 +28,18 @@ class _CattleFormState extends State<CattleForm> {
   final TextEditingController _methodBredController = TextEditingController();
   final TextEditingController _statusController = TextEditingController();
   bool _isLoading = false;
+  String? _adminEmail;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAdminEmail();
+  }
+
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    setState(() {});
+  }
 
   Future<void> _pickImage() async {
     try {
@@ -56,62 +69,66 @@ class _CattleFormState extends State<CattleForm> {
     }
   }
 
- Future<void> _uploadImageAndSaveData() async {
-  setState(() {
-    _isLoading = true;
-  });
-
-  try {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) {
-      throw Exception("User not logged in");
+  Future<void> _uploadImageAndSaveData() async {
+    if (_adminEmail == null) {
+      print('Admin email is not available');
+      return;
     }
 
-    String? imageUrl;
-    if (_image != null) {
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('cattle_images')
-          .child('${DateTime.now().toIso8601String()}.jpg');
-      await ref.putFile(_image!);
-      imageUrl = await ref.getDownloadURL();
-    }
-
-    await FirebaseFirestore.instance.collection('cattle').add({
-      'userId': userId, 
-      'name': _nameController.text,
-      'dob': _dobController.text,
-      'gender': _genderController.text,
-      'breed': _breedController.text,
-      'fatherBreed': _fatherBreedController.text,
-      'motherBreed': _motherBreedController.text,
-      'methodBred': _methodBredController.text,
-      'status': _statusController.text,
-      'imageUrl': imageUrl,
-      'createdAt': Timestamp.fromDate(DateTime.now()),
-    });
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cattle record added successfully!')),
-      );
-    }
-
-    _clearForm();
-    Navigator.pushNamed(context, '/cattleListPage');
-  } catch (e) {
-    print('Error saving data: $e');
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add cattle record: $e')),
-      );
-    }
-  } finally {
     setState(() {
-      _isLoading = false;
+      _isLoading = true;
     });
+
+    try {
+      String? imageUrl;
+      if (_image != null) {
+        final ref = FirebaseStorage.instance
+            .ref()
+            .child('cattle_images')
+            .child('${DateTime.now().toIso8601String()}.jpg');
+        await ref.putFile(_image!);
+        imageUrl = await ref.getDownloadURL();
+      }
+
+      String currentUserEmail = FirebaseAuth.instance.currentUser?.email ?? '';
+
+
+      await FirebaseFirestore.instance.collection('cattle').doc(_adminEmail).collection('entries').add({
+        'admin_email': _adminEmail,
+        'name': _nameController.text,
+        'dob': _dobController.text,
+        'gender': _genderController.text,
+        'breed': _breedController.text,
+        'father_breed': _fatherBreedController.text,
+        'mother_breed': _motherBreedController.text,
+        'method_bred': _methodBredController.text,
+        'status': _statusController.text,
+        'image_url': imageUrl,
+        'created_at': Timestamp.fromDate(DateTime.now()),
+        'filled_in_by': currentUserEmail,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cattle record added successfully!')),
+        );
+      }
+
+      _clearForm();
+      Navigator.pushNamed(context, '/cattleListPage');
+    } catch (e) {
+      print('Error saving data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add cattle record: $e')),
+        );
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
-}
 
   void _clearForm() {
     setState(() {
@@ -172,29 +189,21 @@ class _CattleFormState extends State<CattleForm> {
                       const SizedBox(height: 20),
                       _buildImageDisplay(),
                       const SizedBox(height: 20),
-                      _buildTextField(
-                          'Cow\'s Name', _nameController, Icons.pets),
+                      _buildTextField('Cow\'s Name', _nameController, Icons.pets),
                       _buildDatePickerField(),
-                      _buildTextField(
-                          'Gender', _genderController, Icons.person),
+                      _buildTextField('Gender', _genderController, Icons.person),
                       _buildTextField('Breed', _breedController, Icons.tag),
-                      _buildTextField('Father\'s Breed', _fatherBreedController,
-                          Icons.family_restroom),
-                      _buildTextField('Mother\'s Breed', _motherBreedController,
-                          Icons.family_restroom),
-                      _buildTextField(
-                          'Method Bred', _methodBredController, Icons.science),
-                      _buildTextField(
-                          'Status', _statusController, Icons.health_and_safety),
+                      _buildTextField('Father\'s Breed', _fatherBreedController, Icons.family_restroom),
+                      _buildTextField('Mother\'s Breed', _motherBreedController, Icons.family_restroom),
+                      _buildTextField('Method Bred', _methodBredController, Icons.science),
+                      _buildTextField('Status', _statusController, Icons.health_and_safety),
                       const SizedBox(height: 20),
                       Center(
                         child: ElevatedButton(
-                          onPressed:
-                              _isLoading ? null : _uploadImageAndSaveData,
+                          onPressed: _isLoading ? null : _uploadImageAndSaveData,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blueAccent,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 14.0, horizontal: 32.0),
+                            padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 32.0),
                             textStyle: const TextStyle(fontSize: 18),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12.0),
@@ -257,8 +266,7 @@ class _CattleFormState extends State<CattleForm> {
     );
   }
 
-  Widget _buildTextField(
-      String label, TextEditingController controller, IconData icon) {
+  Widget _buildTextField(String label, TextEditingController controller, IconData icon) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dairy_harbor/firebase_options.dart';
 import 'package:dairy_harbor/pages/authentication/auth_page.dart';
 import 'package:dairy_harbor/pages/authentication/login_or_register_page.dart';
@@ -14,7 +15,7 @@ import 'package:dairy_harbor/pages/inventory/user_profile.dart';
 import 'package:dairy_harbor/pages/manage_cattle/cattle_form.dart';
 import 'package:dairy_harbor/pages/manage_cattle/cattle_list_page.dart';
 import 'package:dairy_harbor/pages/manage_cattle/cattle_profile_page.dart';
-import 'package:dairy_harbor/pages/manage_cattle/main_cattle_Page.dart';
+import 'package:dairy_harbor/pages/manage_cattle/main_cattle_page.dart';
 import 'package:dairy_harbor/pages/milk/daily_production_page.dart';
 import 'package:dairy_harbor/pages/milk/milk_distribution_sales.dart';
 import 'package:dairy_harbor/pages/procedures/artificial_insemination_page.dart';
@@ -31,10 +32,13 @@ import 'package:dairy_harbor/pages/procedures/vaccination_page.dart';
 import 'package:dairy_harbor/pages/reports/reports_page.dart';
 import 'package:dairy_harbor/pages/workers/worker_list_page.dart';
 import 'package:dairy_harbor/pages/workers/worker_profile_page.dart';
+import 'package:dairy_harbor/roles_management/PendingApprovalPage.dart';
+import 'package:dairy_harbor/roles_management/dynamic_role_home.dart';
+import 'package:dairy_harbor/roles_management/roleAuthService.dart';
+import 'package:dairy_harbor/roles_management/rolePermissions.dart';
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -58,20 +62,35 @@ void main() async {
         ChangeNotifierProxyProvider<User?, FirestoreServices>(
           create: (context) => FirestoreServices(''),
           update: (context, user, firestoreServices) {
-            if (user != null) {
-              return FirestoreServices(user.uid);
-            }
-            return firestoreServices ?? FirestoreServices('');
+            return FirestoreServices(user?.uid ?? '');
           },
         ),
       ],
-      child: MyApp(),
+      child: const MyApp(),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
+  Future<String?> getAdminEmailFromFirestore() async {
+    try {
+      final adminSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'admin')
+          .limit(1)
+          .get();
+
+      if (adminSnapshot.docs.isNotEmpty) {
+        return adminSnapshot.docs.first['email'];
+      }
+      print("No admin found");
+    } catch (e) {
+      print("Error fetching admin email: $e");
+    }
+    return null;
+  }
 
   User? get user => FirebaseAuth.instance.currentUser;
 
@@ -81,180 +100,259 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       initialRoute: '/',
       onGenerateRoute: (settings) {
+        final userRole = RoleAuthService().getUserRoleSync();
         switch (settings.name) {
           case '/home':
-            final args = settings.arguments as Map<String, dynamic>? ?? {};
-            final firestoreServices =
-                args['firestoreServices'] as FirestoreServices?;
-            if (firestoreServices == null) {
-              print("Error: FirestoreServices argument is missing or invalid.");
-              return MaterialPageRoute(builder: (context) => AuthPage());
-            }
-            return MaterialPageRoute(
-              builder: (context) => HomePage(
-                barChartData: args['barChartData'] ?? _createBarChartData(),
-                pieChartData: args['pieChartData'] ?? _createPieChartData(),
-                lineChartData: args['lineChartData'] ?? _createLineChartData(),
-                animate: args['animate'] ?? true,
-                firestoreServices: firestoreServices,
-                userId: args['userId'] ?? (user?.uid ?? ''),
-                user: args['user'] as User? ?? user,
-              ),
-            );
-          case '/manageCattle':
-            return MaterialPageRoute(builder: (context) => CattleList());
-          case '/reports':
-            return MaterialPageRoute(builder: (context) => ReportsPage());
-          case '/adminWages':
-            return MaterialPageRoute(
-                builder: (context) => AdministrativeWages());
-          case '/machinery':
-            return MaterialPageRoute(builder: (context) => FarmMachineryPage());
-          case '/feeds':
-            return MaterialPageRoute(builder: (context) => FeedsPage());
-          case '/inventory':
-            return MaterialPageRoute(builder: (context) => InventoryMainPage());
-          case '/medicine':
-            return MaterialPageRoute(builder: (context) => MedicinePage());
-          case '/notification':
-            return MaterialPageRoute(
-                builder: (context) => NotificationScreen());
-          case '/userProfile':
-            return MaterialPageRoute(builder: (context) => UserProfile());
+            return _buildHomePage(settings);
+          case '/milkSales':
+            return _buildAsyncRouteForMilkSales(settings);
           case '/dailyProduction':
-            return MaterialPageRoute(
-                builder: (context) => MilkProductionPage());
-          case '/milkDistribution':
-            return MaterialPageRoute(
-                builder: (context) => MilkDistributionSales());
-          case '/signup':
-            return MaterialPageRoute(
-                builder: (context) => RegisterPage(onTap: () {}));
-          case '/login':
-            return MaterialPageRoute(builder: (context) => LoginPage());
-          case '/loginOrRegister':
-            return MaterialPageRoute(
-                builder: (context) => LoginOrRegisterPage());
-          case '/auth':
-            return MaterialPageRoute(builder: (context) => AuthPage());
-          case '/artificialInsemination':
-            return MaterialPageRoute(
-                builder: (context) => ArtificialInseminationPage());
-          case '/calving':
-            return MaterialPageRoute(builder: (context) => CalvingPage());
-          case '/dehorning':
-            return MaterialPageRoute(builder: (context) => DehorningPage());
-          case '/deworming':
-            return MaterialPageRoute(builder: (context) => DewormingPage());
-          case '/heatDetection':
-            return MaterialPageRoute(builder: (context) => HeatDetectionPage());
-          case '/miscarriage':
-            return MaterialPageRoute(builder: (context) => MiscarriagePage());
-          case '/naturalInsemination':
-            return MaterialPageRoute(
-                builder: (context) => NaturalInseminationPage());
-          case '/pestControl':
-            return MaterialPageRoute(builder: (context) => PestControlPage());
-          case '/pregnancy':
-            return MaterialPageRoute(builder: (context) => PregnancyPage());
-          case '/treatment':
-            return MaterialPageRoute(builder: (context) => TreatmentPage());
-          case '/vaccination':
-            return MaterialPageRoute(builder: (context) => VaccinationPage());
-          case '/workerList':
-            return MaterialPageRoute(builder: (context) => WorkerListPage());
-          case '/workerProfile':
-            final args =
-                settings.arguments as Map<String, dynamic>?; 
-            final workerId =
-                args?['workerId'] as String?;
-            if (workerId == null) {
-              return MaterialPageRoute(
-                  builder: (context) =>
-                      AuthPage());
-            }
-            return MaterialPageRoute(
-                builder: (context) => WorkerProfilePage(workerId: workerId));
-
-          case '/editProfile':
-            return MaterialPageRoute(builder: (context) => EditProfilePage());
-          case '/CattlePage':
-            return MaterialPageRoute(builder: (context) => CattlePage());
-          case '/cattleProfile':
-            final args = settings.arguments as Map<String, dynamic>?;
-            final cattleId = args?['cattleId'] as String?;
-            final index = args?['index'] as int? ?? 0;
-            if (cattleId == null) {
-              return MaterialPageRoute(builder: (context) => AuthPage());
-            }
-            return MaterialPageRoute(
-              builder: (context) =>
-                  CattleProfilePage(cattleId: cattleId, index: index),
-            );
-          case '/cattleListPage':
-            return MaterialPageRoute(builder: (context) => CattleList());
+            return _buildAsyncRoute(settings);
           case '/cattleForm':
-            return MaterialPageRoute(builder: (context) => CattleForm());
+            return _buildAsyncRouteCattleForm(settings);
+          case '/cattleListPage':
+            return _buildAsyncRouteCattleList(settings);
+          case '/artificialInsemination':
+            return _buildAsyncRouteAI(settings);
 
+          case '/calving':
+            return _buildAsyncRouteCalving(settings);
+
+          case '/dehorning':
+            return _buildAsyncRouteDehorning(settings);
+
+          case '/deworming':
+            return _buildAsyncRouteDeworming(settings);
+
+          case '/reports':
+            return _buildPageIfAuthorized(
+                userRole, ReportsPage(), settings.arguments);
+          case '/adminWages':
+            return _buildPageIfAuthorized(
+                userRole, AdministrativeWages(), settings.arguments);
+          case '/machinery':
+            return _buildPageIfAuthorized(
+                userRole, FarmMachineryPage(), settings.arguments);
+          case '/feeds':
+            return _buildPageIfAuthorized(
+                userRole, FeedsPage(), settings.arguments);
+          case '/inventory':
+            return _buildPageIfAuthorized(
+                userRole, InventoryMainPage(), settings.arguments);
+          case '/medicine':
+            return _buildPageIfAuthorized(
+                userRole, MedicinePage(), settings.arguments);
+          case '/notification':
+            return _buildPageIfAuthorized(
+                userRole, NotificationScreen(), settings.arguments);
+          case '/userProfile':
+            return _buildPageIfAuthorized(
+                userRole, UserProfile(), settings.arguments);
+          case '/signup':
+            return _buildMaterialPageRoute(RegisterPage(onTap: () {}));
+          case '/login':
+            return _buildMaterialPageRoute(LoginPage());
+          case '/loginOrRegister':
+            return _buildMaterialPageRoute(const LoginOrRegisterPage());
+          case '/auth':
+            return _buildMaterialPageRoute(AuthPage());
+          case '/dynamic_role_home':
+            return _buildMaterialPageRoute(DynamicRoleHome());
+          case '/heatDetection':
+            return _buildPageIfAuthorized(
+                userRole, HeatDetectionPage(), settings.arguments);
+          case '/miscarriage':
+            return _buildPageIfAuthorized(
+                userRole, MiscarriagePage(), settings.arguments);
+          case '/naturalInsemination':
+            return _buildPageIfAuthorized(
+                userRole, NaturalInseminationPage(), settings.arguments);
+          case '/pestControl':
+            return _buildPageIfAuthorized(
+                userRole, PestControlPage(), settings.arguments);
+          case '/pregnancy':
+            return _buildPageIfAuthorized(
+                userRole, PregnancyPage(), settings.arguments);
+          case '/treatment':
+            return _buildPageIfAuthorized(
+                userRole, TreatmentPage(), settings.arguments);
+          case '/vaccination':
+            return _buildPageIfAuthorized(
+                userRole, VaccinationPage(), settings.arguments);
+          case '/workerList':
+            return _buildPageIfAuthorized(
+                userRole, WorkerListPage(), settings.arguments);
+          case '/workerProfile':
+            return _buildWorkerProfilePage(settings);
+          case '/editProfile':
+            return _buildPageIfAuthorized(
+                userRole, EditProfilePage(), settings.arguments);
+          case '/CattlePage':
+            return _buildPageIfAuthorized(
+                userRole, CattlePage(), settings.arguments);
+          case '/cattleProfile':
+            return _buildCattleProfilePage(settings);
+          case '/cattleEditPage':
+            return _buildEditCattlePage(settings);
           default:
-            return MaterialPageRoute(builder: (context) => AuthPage());
+            return _buildMaterialPageRoute(AuthPage());
         }
       },
     );
   }
 
-  List<BarChartGroupData> _createBarChartData() {
-    return [
-      BarChartGroupData(
-        x: 0,
-        barRods: [
-          BarChartRodData(toY: 5000, color: Colors.blue),
-        ],
-      ),
-      BarChartGroupData(
-        x: 1,
-        barRods: [
-          BarChartRodData(toY: 2500, color: Colors.blue),
-        ],
-      ),
-      BarChartGroupData(
-        x: 2,
-        barRods: [
-          BarChartRodData(toY: 10000, color: Colors.blue),
-        ],
-      ),
-      BarChartGroupData(
-        x: 3,
-        barRods: [
-          BarChartRodData(toY: 7500, color: Colors.blue),
-        ],
-      ),
-    ];
+  MaterialPageRoute _buildMaterialPageRoute(Widget page) {
+    return MaterialPageRoute(builder: (context) => page);
   }
 
-  List<PieChartSectionData> _createPieChartData() {
-    return [
-      PieChartSectionData(value: 30, color: Colors.blue, title: '30%'),
-      PieChartSectionData(value: 20, color: Colors.red, title: '20%'),
-      PieChartSectionData(value: 25, color: Colors.green, title: '25%'),
-      PieChartSectionData(value: 25, color: Colors.orange, title: '25%'),
-    ];
+  MaterialPageRoute _buildAsyncRoute(RouteSettings settings) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+    return MaterialPageRoute(
+      builder: (context) =>
+          MilkProductionPage(adminEmailFuture: adminEmailFuture),
+    );
   }
 
-  List<LineChartBarData> _createLineChartData() {
-    return [
-      LineChartBarData(
-        spots: [
-          const FlSpot(0, 5000),
-          const FlSpot(1, 2500),
-          const FlSpot(2, 10000),
-          const FlSpot(3, 7500),
-        ],
-        isCurved: true,
-        color: Colors.blue,
-        dotData: const FlDotData(show: true),
-        belowBarData: BarAreaData(show: true),
+  MaterialPageRoute _buildAsyncRouteCattleForm(RouteSettings settings) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+    return MaterialPageRoute(
+      builder: (context) => CattleForm(adminEmailFuture: adminEmailFuture),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRouteCattleList(RouteSettings settings) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+    return MaterialPageRoute(
+      builder: (context) => CattleList(adminEmailFuture: adminEmailFuture),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRouteAI(RouteSettings settings) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+    return MaterialPageRoute(
+      builder: (context) =>
+          ArtificialInseminationPage(adminEmailFuture: adminEmailFuture),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRouteDehorning(RouteSettings settings) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+    return MaterialPageRoute(
+      builder: (context) => DehorningPage(adminEmailFuture: adminEmailFuture),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRouteCalving(RouteSettings settings) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+    return MaterialPageRoute(
+      builder: (context) => CalvingPage(adminEmailFuture: adminEmailFuture),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRouteDeworming(RouteSettings settings) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+    return MaterialPageRoute(
+      builder: (context) => DewormingPage(adminEmailFuture: adminEmailFuture),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRouteForMilkSales(RouteSettings settings) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+    return MaterialPageRoute(
+      builder: (context) => MilkDistributionSales(
+        adminEmailFuture: adminEmailFuture,
+        arguments: settings.arguments,
       ),
-    ];
+    );
+  }
+
+  MaterialPageRoute _buildHomePage(RouteSettings settings) {
+    final args = settings.arguments as Map<String, dynamic>? ?? {};
+    final firestoreServices = args['firestoreServices'] as FirestoreServices?;
+    final adminEmailFuture =
+        getAdminEmailFromFirestore(); // Get admin email future
+
+    if (firestoreServices == null) {
+      print("Error: FirestoreServices argument is missing or invalid.");
+      return _buildMaterialPageRoute(AuthPage());
+    }
+
+    return MaterialPageRoute(
+      builder: (context) => HomePage(
+        animate: args['animate'] ?? true,
+        firestoreServices: firestoreServices,
+        userId: args['userId'] ?? (user?.uid ?? ''),
+        user: args['user'] as User? ?? user,
+        adminEmailFuture: adminEmailFuture,
+      ),
+    );
+  }
+
+  MaterialPageRoute _buildWorkerProfilePage(RouteSettings settings) {
+    final args = settings.arguments as Map<String, dynamic>? ?? {};
+    final workerId = args['workerId'] as String?;
+    if (workerId == null) {
+      return _buildMaterialPageRoute(AuthPage());
+    }
+    return MaterialPageRoute(
+      builder: (context) => WorkerProfilePage(workerId: workerId),
+    );
+  }
+
+  MaterialPageRoute _buildCattleProfilePage(RouteSettings settings) {
+    final args = settings.arguments as Map<String, dynamic>? ?? {};
+    final cattleId = args['cattleId'] as String?;
+    //final index = args['index'] as int? ?? 0;
+
+    // Fetch admin email future
+    final adminEmailFuture = args['adminEmailFuture'] as Future<String?>;
+
+    if (cattleId == null) {
+      return _buildMaterialPageRoute(AuthPage());
+    }
+
+    return _buildMaterialPageRoute(CattleProfilePage(
+      cattleId: cattleId,
+      //index: index,
+      adminEmailFuture: adminEmailFuture,
+    ));
+  }
+
+  MaterialPageRoute _buildEditCattlePage(RouteSettings settings) {
+    final args = settings.arguments as Map<String, dynamic>? ?? {};
+    final cattleId = args['cattleId'] as String?;
+    final initialData = args['initialData'] as Map<String, dynamic>? ?? {};
+
+    // Fetch admin email future
+    final adminEmailFuture = getAdminEmailFromFirestore();
+
+    if (cattleId == null) {
+      return _buildMaterialPageRoute(AuthPage());
+    }
+
+    return MaterialPageRoute(
+      builder: (context) => EditCattlePage(
+        cattleId: cattleId,
+        initialData: initialData, // Pass initialData
+        adminEmailFuture: adminEmailFuture, // Pass the admin email future
+      ),
+    );
+  }
+
+  MaterialPageRoute _buildPageIfAuthorized(
+      String userRole, Widget page, Object? arguments) {
+    if (page is PendingApprovalPage) {
+      return MaterialPageRoute(builder: (context) => page);
+    }
+
+    if (userRole == 'admin') {
+      return MaterialPageRoute(builder: (context) => page);
+    }
+
+    if (canAccessPage(userRole, page.runtimeType.toString())) {
+      return MaterialPageRoute(builder: (context) => page);
+    } else {
+      return MaterialPageRoute(builder: (context) => AuthPage());
+    }
   }
 }

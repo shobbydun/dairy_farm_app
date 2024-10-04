@@ -1,13 +1,33 @@
 import 'package:dairy_harbor/pages/authentication/login_or_register_page.dart';
 import 'package:dairy_harbor/pages/dashboard/home_page.dart';
+import 'package:dairy_harbor/roles_management/PendingApprovalPage.dart';
+import 'package:dairy_harbor/roles_management/dynamic_role_home.dart';
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthPage extends StatelessWidget {
   AuthPage({super.key});
-  
+
+  Future<String?> getAdminEmailFromFirestore() async {
+    try {
+      final adminSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'admin')
+          .limit(1)
+          .get();
+
+      if (adminSnapshot.docs.isNotEmpty) {
+        return adminSnapshot.docs.first['email'];
+      }
+      print("No admin found");
+    } catch (e) {
+      print("Error fetching admin email: $e");
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -20,14 +40,51 @@ class AuthPage extends StatelessWidget {
 
           if (snapshot.hasData) {
             final User? user = snapshot.data;
-            return HomePage(
-              barChartData: _createBarChartData(), 
-              pieChartData: _createPieChartData(), 
-              lineChartData: _createLineChartData(),
-              animate: true,
-              firestoreServices: FirestoreServices(user!.uid), 
-              user: user, 
-              userId: user.uid, 
+
+            return FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user!.uid)
+                  .get(),
+              builder: (context, userSnapshot) {
+                if (userSnapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
+
+                if (userSnapshot.hasError) {
+                  print("Error fetching user data: ${userSnapshot.error}");
+                  return Center(child: Text("Error fetching user data."));
+                }
+
+                if (userSnapshot.hasData && userSnapshot.data!.exists) {
+                  var userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                  print("User Data: $userData");
+
+                  String role = userData['role'] ?? 'undefined';
+                  String status = userData['status'] ?? 'undefined';
+                  final adminEmailFuture = getAdminEmailFromFirestore();
+
+                  if (role == 'admin') {
+                    print("Admin user detected.");
+                    return HomePage(
+                      animate: true,
+                      firestoreServices: FirestoreServices(user.uid),
+                      user: user,
+                      userId: user.uid,
+                      adminEmailFuture: adminEmailFuture,
+                    );
+                  } else if (status == 'approved') {
+                    print("Approved non-admin user detected.");
+                    return DynamicRoleHome();
+                  } else {
+                    print("User is pending approval.");
+                    return PendingApprovalPage();
+                  }
+                } else {
+                  print("User data does not exist, redirecting to login/register.");
+                  return LoginOrRegisterPage();
+                }
+              },
             );
           } else {
             return LoginOrRegisterPage();
@@ -35,117 +92,5 @@ class AuthPage extends StatelessWidget {
         },
       ),
     );
-  }
-
-// Function to determine color based on value
-Color _determineBarColor(double value) {
-  if (value > 8000) {
-    return Colors.green; // High
-  } else if (value > 4000) {
-    return Colors.orange; // Medium
-  } else {
-    return Colors.red; // Low
-  }
-}
-
-// Function to create bar chart data with static colors
-List<BarChartGroupData> _createBarChartData() {
-  return [
-    BarChartGroupData(
-      x: 0,
-      barRods: [
-        BarChartRodData(
-          toY: 5000,
-          color: _determineBarColor(5000),
-          width: 20, 
-        ),
-      ],
-    ),
-    BarChartGroupData(
-      x: 1,
-      barRods: [
-        BarChartRodData(
-          toY: 2500,
-          color: _determineBarColor(2500), 
-          width: 20, 
-        ),
-      ],
-    ),
-    BarChartGroupData(
-      x: 2,
-      barRods: [
-        BarChartRodData(
-          toY: 10000,
-          color: _determineBarColor(10000), 
-          width: 20, 
-        ),
-      ],
-    ),
-    BarChartGroupData(
-      x: 3,
-      barRods: [
-        BarChartRodData(
-          toY: 7500,
-          color: _determineBarColor(7500), 
-          width: 20, 
-        ),
-      ],
-    ),
-  ];
-}
-
-  // Function to create pie chart data
-  List<PieChartSectionData> _createPieChartData() {
-    return [
-      PieChartSectionData(
-        value: 30,
-        color: Colors.blue,
-        title: '30%',
-        radius: 50,
-        titleStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-      ),
-      PieChartSectionData(
-        value: 20,
-        color: Colors.red,
-        title: '20%',
-        radius: 50,
-        titleStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-      ),
-      PieChartSectionData(
-        value: 25,
-        color: Colors.green,
-        title: '25%',
-        radius: 50,
-        titleStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-      ),
-      PieChartSectionData(
-        value: 25,
-        color: Colors.orange,
-        title: '25%',
-        radius: 50,
-        titleStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-      ),
-    ];
-  }
-
-  // Function to create line chart data
-  List<LineChartBarData> _createLineChartData() {
-    return [
-      LineChartBarData(
-        spots: [
-          const FlSpot(0, 5000),
-          const FlSpot(1, 2500),
-          const FlSpot(2, 10000),
-          const FlSpot(3, 7500),
-        ],
-        isCurved: true,
-        color: Colors.blue,
-        dotData: const FlDotData(show: true),
-        belowBarData: BarAreaData(
-          show: true,
-          color: Colors.blue.withOpacity(0.3), // Gradient effect below the line
-        ),
-      ),
-    ];
   }
 }

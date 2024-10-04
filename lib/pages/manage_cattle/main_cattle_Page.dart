@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'cattle_form.dart';
-import 'cattle_list_page.dart';
 
 class CattlePage extends StatefulWidget {
   const CattlePage({super.key});
@@ -40,11 +38,27 @@ class _CattlePageState extends State<CattlePage> {
               ),
             ),
             const SizedBox(height: 10),
-            if (_showForm) CattleForm(),
+            if (_showForm)
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/cattleForm');
+                },
+                child: const Text('Go to Cattle Form'),
+              ),
             const SizedBox(height: 20),
-            SizedBox(
-              height: 300,
-              child: CattleList(),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/cattleList');
+              },
+              child: const Text('Go to Cattle List'),
+            ),
+            const SizedBox(height: 20),
+            // Optional: Directly include a button to go back if you're navigating away from CattlePage
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context); // Go back to the previous screen
+              },
+              child: const Text('Back'),
             ),
           ],
         ),

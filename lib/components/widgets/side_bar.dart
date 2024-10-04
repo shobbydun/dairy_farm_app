@@ -1,3 +1,6 @@
+import 'package:dairy_harbor/pages/reports/reports_page.dart';
+import 'package:dairy_harbor/pages/workers/worker_list_page.dart';
+import 'package:dairy_harbor/roles_management/AdminDashboardPage.dart';
 import 'package:dairy_harbor/services_functions/auth_service.dart';
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:flutter/material.dart';
@@ -131,7 +134,6 @@ class _SidebarMenuState extends State<SidebarMenu> {
                       });
                     },
                     children: [
-                    
                       _buildSubMenuItem(
                         text: 'Cattle List Page',
                         onTap: () {
@@ -154,7 +156,12 @@ class _SidebarMenuState extends State<SidebarMenu> {
                     isExpanded: false,
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.pushNamed(context, '/reports');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ReportsPage(),
+                        ),
+                      );
                     },
                   ),
                   _buildExpandableMenuItem(
@@ -181,7 +188,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
                           Navigator.pushNamed(context, '/adminWages');
                         },
                       ),
-                      
+
                       _buildSubMenuItem(
                         text: 'Farm Machinery',
                         onTap: () {
@@ -240,7 +247,8 @@ class _SidebarMenuState extends State<SidebarMenu> {
                         text: 'Milk Distribution with Sales',
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.pushNamed(context, '/milkDistribution');
+
+                          Navigator.pushNamed(context, '/milkSales');
                         },
                       ),
                     ],
@@ -349,7 +357,25 @@ class _SidebarMenuState extends State<SidebarMenu> {
                         text: 'My Employees',
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.pushNamed(context, '/workerList');
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  WorkerListPage(), // Navigate to Workers List
+                            ),
+                          );
+                        },
+                      ),
+                      _buildSubMenuItem(
+                        text: 'Roles Allocation/Approval',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AdminDashboardPage(),
+                            ),
+                          );
                         },
                       ),
                     ],

@@ -3,6 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class MilkProductionPage extends StatefulWidget {
+  final Future<String?> adminEmailFuture;
+
+  MilkProductionPage({required this.adminEmailFuture});
+
   @override
   _MilkProductionPageState createState() => _MilkProductionPageState();
 }
@@ -21,98 +25,110 @@ class _MilkProductionPageState extends State<MilkProductionPage> {
   bool _isFormVisible = false;
   List<Map<String, dynamic>> _tableData = [];
   String? _selectedDocId;
+  String? _adminEmail;
 
   @override
   void initState() {
     super.initState();
     _fetchData();
+    _fetchAdminEmail();
+  }
+
+  // Get current user email
+  String? getCurrentUserEmail() {
+    User? user = FirebaseAuth.instance.currentUser;
+    return user?.email; // Return user email or null if not signed in
+  }
+
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    await _fetchData(); // Fetch data after getting the admin email
+    setState(() {});
   }
 
   Future<void> _fetchData() async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
+    if (_adminEmail != null) {
       QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
           .collection('milk_production')
+          .doc(_adminEmail)
+          .collection('entries')
           .get();
 
-      setState(() {
-        _tableData = snapshot.docs.map((doc) {
-          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-          return {
-            'id': doc.id,
-            'Date': (data['date'] as Timestamp).toDate(),
-            'Milk in Litres': data['milk_in_litres']?.toString() ?? '',
-            'Given to Calves': data['given_to_calves']?.toString() ?? '',
-            'Spillage': data['spillage']?.toString() ?? '',
-            'Spoiled': data['spoiled']?.toString() ?? '',
-            'Final Milk Litres': data['final_in_litres']?.toString() ?? '',
-            'Price per Litre': data['price_per_litre']?.toString() ?? '',
-          };
-        }).toList();
-      });
-    }
-  }
-
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      if (_selectedDocId != null) {
-        _updateEntry(_selectedDocId!);
-      } else {
-        _addEntry();
+      if (mounted) {
+        setState(() {
+          _tableData = snapshot.docs.map((doc) {
+            Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+            print('Fetched data for doc ${doc.id}: $data');
+            return {
+              'id': doc.id,
+              'Date': (data['date'] as Timestamp).toDate(),
+              'Milk in Litres': data['milk_in_litres']?.toString() ?? '',
+              'Given to Calves': data['given_to_calves']?.toString() ?? '',
+              'Spillage': data['spillage']?.toString() ?? '',
+              'Spoiled': data['spoiled']?.toString() ?? '',
+              'Final Milk Litres': data['final_in_litres']?.toString() ?? '',
+              'Price per Litre': data['price_per_litre']?.toString() ?? '',
+              'Admin Email': data['admin_email'] ?? '',
+              'Filled In By': data['filled_in_by'] ?? 'Not specified',
+            };
+          }).toList();
+        });
       }
     }
   }
-  String _formatDate(DateTime date) {
-    final List<String> weekdays = [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday'
-    ];
-    return "${weekdays[date.weekday - 1].substring(0, 3)}, ${date.month} ${date.day}, ${date.year}";
-  }
+
   Future<void> _addEntry() async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
+    String? userEmail = getCurrentUserEmail();
+    if (userEmail == null) {
+      // Handle the case where the user is not logged in.
+      return;
+    }
+
+    if (_adminEmail != null) {
       await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
           .collection('milk_production')
+          .doc(_adminEmail)
+          .collection('entries')
           .add({
         'date': _selectedDate,
         'milk_in_litres': double.tryParse(_milkInLitresController.text) ?? 0.0,
-        'given_to_calves': double.tryParse(_givenToCalvesController.text) ?? 0.0,
+        'given_to_calves':
+            double.tryParse(_givenToCalvesController.text) ?? 0.0,
         'spillage': double.tryParse(_spillageController.text) ?? 0.0,
         'spoiled': double.tryParse(_spoiledController.text) ?? 0.0,
-        'final_in_litres': double.tryParse(_consumedByStaffController.text) ?? 0.0,
-        'price_per_litre': double.tryParse(_pricePerLitreController.text) ?? 0.0,
+        'final_in_litres':
+            double.tryParse(_consumedByStaffController.text) ?? 0.0,
+        'price_per_litre':
+            double.tryParse(_pricePerLitreController.text) ?? 0.0,
+        'admin_email': _adminEmail,
+        'filled_in_by': userEmail, // Ensure userEmail is not null
       });
       _resetForm();
-      await _fetchData();
+      await _fetchData(); // Refresh the table data
     }
   }
 
   Future<void> _updateEntry(String docId) async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
+    String? userEmail = getCurrentUserEmail();
+    if (_adminEmail != null) {
       await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
           .collection('milk_production')
+          .doc(_adminEmail) // Access the admin's document
+          .collection('entries') // Get the entries subcollection
           .doc(docId)
           .update({
         'date': _selectedDate,
         'milk_in_litres': double.tryParse(_milkInLitresController.text) ?? 0.0,
-        'given_to_calves': double.tryParse(_givenToCalvesController.text) ?? 0.0,
+        'given_to_calves':
+            double.tryParse(_givenToCalvesController.text) ?? 0.0,
         'spillage': double.tryParse(_spillageController.text) ?? 0.0,
         'spoiled': double.tryParse(_spoiledController.text) ?? 0.0,
-        'final_in_litres': double.tryParse(_consumedByStaffController.text) ?? 0.0,
-        'price_per_litre': double.tryParse(_pricePerLitreController.text) ?? 0.0,
+        'final_in_litres':
+            double.tryParse(_consumedByStaffController.text) ?? 0.0,
+        'price_per_litre':
+            double.tryParse(_pricePerLitreController.text) ?? 0.0,
+        'admin_email': _adminEmail,
+        'filled_in_by': userEmail, // Update the admin's email
       });
       _resetForm();
       await _fetchData();
@@ -141,16 +157,13 @@ class _MilkProductionPageState extends State<MilkProductionPage> {
     );
 
     if (confirmed == true) {
-      User? user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('milk_production')
-            .doc(docId)
-            .delete();
-        _fetchData();
-      }
+      await FirebaseFirestore.instance
+          .collection('milk_production')
+          .doc(_adminEmail) // Access the admin's document
+          .collection('entries') // Get the entries subcollection
+          .doc(docId)
+          .delete();
+      _fetchData();
     }
   }
 
@@ -188,7 +201,7 @@ class _MilkProductionPageState extends State<MilkProductionPage> {
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
       firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
+      lastDate: DateTime.now(),
     );
     if (picked != null && picked != _selectedDate) {
       setState(() {
@@ -274,8 +287,7 @@ class _MilkProductionPageState extends State<MilkProductionPage> {
             _buildTextField('Spoiled (Litres)', _spoiledController,
                 keyboardType: TextInputType.number),
             const SizedBox(height: 12),
-            _buildTextField(
-                'Final Milk in Litres', _consumedByStaffController,
+            _buildTextField('Final Milk in Litres', _consumedByStaffController,
                 keyboardType: TextInputType.number),
             const SizedBox(height: 12),
             _buildTextField('Price per Litre', _pricePerLitreController,
@@ -407,10 +419,13 @@ class _MilkProductionPageState extends State<MilkProductionPage> {
       _buildTableColumn('Spoiled'),
       _buildTableColumn('Final Milk Litres'),
       _buildTableColumn('Price per Litre'),
+      _buildTableColumn('Admin Email'),
+      _buildTableColumn('Filled in by'),
       DataColumn(
-          label: Text('Actions',
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, color: Colors.blueAccent))),
+        label: Text('Actions',
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+      ),
     ];
   }
 
@@ -423,7 +438,7 @@ class _MilkProductionPageState extends State<MilkProductionPage> {
   }
 
   List<DataRow> _getTableRows() {
-    return _tableData.map((data) {
+    final rows = _tableData.map((data) {
       return DataRow(
         cells: <DataCell>[
           DataCell(Text(_formatDate(data['Date']))),
@@ -433,6 +448,8 @@ class _MilkProductionPageState extends State<MilkProductionPage> {
           DataCell(Text(data['Spoiled'] ?? '')),
           DataCell(Text(data['Final Milk Litres'] ?? '')),
           DataCell(Text(data['Price per Litre'] ?? '')),
+          DataCell(Text(data['Admin Email'] ?? '')),
+          DataCell(Text(data['Filled In By'] ?? '')), // Check this line
           DataCell(Row(
             children: [
               IconButton(
@@ -448,5 +465,31 @@ class _MilkProductionPageState extends State<MilkProductionPage> {
         ],
       );
     }).toList();
+
+    print('Rows: $rows'); // Debug print to check the constructed rows
+    return rows;
+  }
+
+  String _formatDate(DateTime date) {
+    final List<String> weekdays = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
+    return "${weekdays[date.weekday - 1].substring(0, 3)}, ${date.month} ${date.day}, ${date.year}";
+  }
+
+  void _submitForm() {
+    if (_formKey.currentState!.validate()) {
+      if (_selectedDocId != null) {
+        _updateEntry(_selectedDocId!);
+      } else {
+        _addEntry();
+      }
+    }
   }
 }

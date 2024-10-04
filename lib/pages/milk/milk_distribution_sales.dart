@@ -10,7 +10,10 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:url_launcher/url_launcher.dart';
 
 class MilkDistributionSales extends StatefulWidget {
-  const MilkDistributionSales({super.key});
+  final Future<String?> adminEmailFuture;
+
+  const MilkDistributionSales(
+      {super.key, required this.adminEmailFuture, Object? arguments});
 
   @override
   _MilkDistributionSalesState createState() => _MilkDistributionSalesState();
@@ -24,12 +27,23 @@ class _MilkDistributionSalesState extends State<MilkDistributionSales> {
   double totalMilkDistributed = 0.0;
   List<FlSpot> chartData = [];
   String selectedPeriod = 'weekly';
+  String? _adminEmail;
 
   @override
   void initState() {
     super.initState();
     _setDefaultDateRange();
-    _fetchData();
+    _fetchAdminEmail();
+  }
+
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    if (_adminEmail != null) {
+      await _fetchData(); // Fetch data after getting the admin email
+    }
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _setDefaultDateRange() {
@@ -44,92 +58,74 @@ class _MilkDistributionSalesState extends State<MilkDistributionSales> {
     }
   }
 
-  void _fetchData() async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null && _startDate != null && _endDate != null) {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
+ Future<void> _fetchData() async {
+  User? user = FirebaseAuth.instance.currentUser;
+  if (user != null &&
+      _startDate != null &&
+      _endDate != null &&
+      _adminEmail != null) {
+    try {
+      QuerySnapshot entriesSnapshot = await FirebaseFirestore.instance
           .collection('milk_production')
-          .where('date',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(_startDate!))
-          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(_endDate!))
+          .doc(_adminEmail)
+          .collection('entries')
           .get();
+
 
       double sales = 0.0;
       double milkDistributed = 0.0;
       List<FlSpot> spots = [];
 
-      if (selectedPeriod == 'weekly') {
-        Map<int, double> dailyData = {};
-        Map<int, double> dailyPriceData = {}; // Store price data
+      if (entriesSnapshot.docs.isEmpty) {
+        print('No entries found for the selected date range.');
+      } else {
+        print('Fetched ${entriesSnapshot.docs.length} entries.');
 
-        for (var doc in snapshot.docs) {
+        for (var doc in entriesSnapshot.docs) {
           var data = doc.data() as Map<String, dynamic>;
           DateTime date = (data['date'] as Timestamp).toDate();
-          double milkInLitres =
-              double.tryParse(data['final_in_litres'].toString()) ?? 0;
-          double pricePerLitre =
-              double.tryParse(data['price_per_litre'].toString()) ?? 0;
 
-          sales += milkInLitres * pricePerLitre;
-          milkDistributed += milkInLitres;
+          // Ensure that the entry falls within the selected date range
+          if (date.isAfter(_startDate!) && date.isBefore(_endDate!.add(Duration(days: 1)))) {
+            double milkInLitres = double.tryParse(data['final_in_litres'].toString()) ?? 0;
+            double pricePerLitre = double.tryParse(data['price_per_litre'].toString()) ?? 0;
 
-          int dayOfWeek = date.weekday; // 1 (Mon) to 7 (Sun)
-          dailyData[dayOfWeek] = (dailyData[dayOfWeek] ?? 0) + milkInLitres;
-          dailyPriceData[dayOfWeek] = pricePerLitre; // Keep track of the price
-        }
+            sales += milkInLitres * pricePerLitre;
+            milkDistributed += milkInLitres;
 
-        // Generate spots for each day of the week
-        for (int i = 1; i <= 7; i++) {
-          double totalSalesForDay = dailyData[i] ?? 0;
-          double priceForDay =
-              dailyPriceData[i] ?? 0; // Use the price for the day
-          spots.add(FlSpot(i.toDouble(), totalSalesForDay * priceForDay));
-        }
-      } else if (selectedPeriod == 'monthly') {
-        Map<int, double> monthlyData = {};
-        Map<int, double> monthlyPriceData = {}; // Store price data
+            print('Current Sales Entry: $milkInLitres * $pricePerLitre = ${milkInLitres * pricePerLitre}');
 
-        for (var doc in snapshot.docs) {
-          var data = doc.data() as Map<String, dynamic>;
-          DateTime date = (data['date'] as Timestamp).toDate();
-          double milkInLitres =
-              double.tryParse(data['final_in_litres'].toString()) ?? 0;
-          double pricePerLitre =
-              double.tryParse(data['price_per_litre'].toString()) ?? 0;
-
-          sales += milkInLitres * pricePerLitre;
-          milkDistributed += milkInLitres;
-
-          int month = date.month; // 1 (Jan) to 12 (Dec)
-          monthlyData[month] = (monthlyData[month] ?? 0) + milkInLitres;
-          monthlyPriceData[month] = pricePerLitre; // Keep track of the price
-        }
-
-        // Generate spots for each month
-        for (int i = 1; i <= 12; i++) {
-          double totalSalesForMonth = monthlyData[i] ?? 0;
-          double priceForMonth =
-              monthlyPriceData[i] ?? 0; // Use the price for the month
-          spots.add(FlSpot(i.toDouble(), totalSalesForMonth * priceForMonth));
+            if (selectedPeriod == 'weekly') {
+              int dayOfWeek = date.weekday;
+              spots.add(FlSpot(dayOfWeek.toDouble(), milkInLitres * pricePerLitre));
+            } else if (selectedPeriod == 'monthly') {
+              int month = date.month;
+              spots.add(FlSpot(month.toDouble(), milkInLitres * pricePerLitre));
+            }
+          }
         }
       }
 
-      setState(() {
-        totalSales = sales;
-        totalMilkDistributed = milkDistributed;
-        chartData = spots.isNotEmpty
-            ? spots
-            : [FlSpot(0, 0)]; // Ensure chart data has at least one point
-      });
+      if (mounted) {
+        setState(() {
+          totalSales = sales;
+          totalMilkDistributed = milkDistributed;
+          chartData = spots.isNotEmpty ? spots : [FlSpot(0, 0)];
+        });
+      }
 
-      // Debugging statements
       print('Total Sales: $totalSales');
       print('Total Milk Distributed: $totalMilkDistributed');
       print('Chart Data: $chartData');
+    } catch (e) {
+      print('Error fetching data: $e');
     }
+  } else {
+    print('User is not authenticated or dates are not set or admin email is null.');
   }
+}
+
+
 
   void _showDateRangePicker(BuildContext context) async {
     showDateRangePicker(
@@ -320,7 +316,6 @@ class _MilkDistributionSalesState extends State<MilkDistributionSales> {
               ),
             ),
 
-           
             // milk Sales Chart
             Container(
               margin: const EdgeInsets.only(bottom: 16.0),

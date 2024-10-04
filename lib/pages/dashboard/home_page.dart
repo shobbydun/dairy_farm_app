@@ -4,9 +4,7 @@ import 'package:dairy_harbor/components/widgets/my_app_bar.dart';
 import 'package:dairy_harbor/components/widgets/my_card.dart';
 import 'package:dairy_harbor/components/widgets/side_bar.dart';
 import 'package:dairy_harbor/pages/inventory/feeds_page.dart';
-import 'package:dairy_harbor/pages/manage_cattle/cattle_list_page.dart';
-import 'package:dairy_harbor/pages/milk/milk_distribution_sales.dart';
-import 'package:dairy_harbor/pages/procedures/calving_page.dart';
+import 'package:dairy_harbor/pages/reports/reports_page.dart';
 import 'package:dairy_harbor/pages/workers/worker_list_page.dart';
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -17,22 +15,18 @@ import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 class HomePage extends StatefulWidget {
   final FirestoreServices firestoreServices;
-  final List<BarChartGroupData> barChartData;
-  final List<PieChartSectionData> pieChartData;
-  final List<LineChartBarData> lineChartData;
   final bool animate;
   final User? user;
   final String userId;
+  final Future<String?> adminEmailFuture;
 
   HomePage({
     super.key,
-    required this.barChartData,
-    required this.pieChartData,
-    required this.lineChartData,
     required this.animate,
     this.user,
     required this.firestoreServices,
     required this.userId,
+    required this.adminEmailFuture,
   });
 
   @override
@@ -41,6 +35,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String? farmName;
+  String? _adminEmail;
 
   final _controller = PageController();
 
@@ -55,6 +50,7 @@ class _HomePageState extends State<HomePage> {
   bool isLoading = true;
   List<FlSpot> chartData = [];
   List<double> dailyExpenses = List<double>.filled(7, 0.0);
+  double chartMaxY = 0.0;
 
   Future<void> _fetchFarmName() async {
     try {
@@ -64,6 +60,16 @@ class _HomePageState extends State<HomePage> {
       });
     } catch (e) {
       print("Error fetching farm name: $e");
+    }
+  }
+
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    if (_adminEmail != null) {
+      await _fetchData(); // Fetch data after getting the admin email
+    }
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -79,59 +85,69 @@ class _HomePageState extends State<HomePage> {
     _fetchCounts();
     _fetchData();
     _fetchWeeklyExpenses();
+    _fetchAdminEmail();
   }
 
-  void _fetchData() async {
+  Future<void> _fetchData() async {
     User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      // Fetch all documents in the milk_production collection for the user
-      QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('milk_production')
-          .get(); // No date filtering
+    if (user != null && _adminEmail != null) {
+      try {
+        QuerySnapshot entriesSnapshot = await FirebaseFirestore.instance
+            .collection('milk_production')
+            .doc(_adminEmail)
+            .collection('entries')
+            .get();
 
-      double sales = 0.0;
-      double milkDistributed = 0.0;
+        double sales = 0.0;
+        double milkDistributed = 0.0;
+        List<FlSpot> spots = [];
 
-      // Initialize daily data storage
-      Map<int, double> dailyData = {}; // For each day of the week
+        if (entriesSnapshot.docs.isEmpty) {
+          print('No entries found.');
+        } else {
+          print('Fetched ${entriesSnapshot.docs.length} entries.');
 
-      for (var doc in snapshot.docs) {
-        var data = doc.data() as Map<String, dynamic>;
-        double milkInLitres =
-            double.tryParse(data['final_in_litres'].toString()) ?? 0;
-        double pricePerLitre =
-            double.tryParse(data['price_per_litre'].toString()) ?? 0;
+          for (var doc in entriesSnapshot.docs) {
+            var data = doc.data() as Map<String, dynamic>;
+            DateTime date = (data['date'] as Timestamp).toDate();
+            int dayOfWeek = date.weekday; // 1 (Monday) to 7 (Sunday)
+            double milkInLitres =
+                double.tryParse(data['final_in_litres'].toString()) ?? 0;
+            double pricePerLitre =
+                double.tryParse(data['price_per_litre'].toString()) ?? 0;
 
-        // Calculate sales and milk distributed
-        sales += milkInLitres * pricePerLitre;
-        milkDistributed += milkInLitres;
+            // Print values for debugging
+            print(
+                'Date: $date, Milk in Litres: $milkInLitres, Price per Litre: $pricePerLitre');
 
-        // Assuming `date` is stored in the document to determine the day
-        DateTime date = (data['date'] as Timestamp).toDate();
-        int dayOfWeek = date.weekday; // 1 (Monday) to 7 (Sunday)
-        dailyData[dayOfWeek] =
-            (dailyData[dayOfWeek] ?? 0) + milkInLitres; // Sum milk for each day
+            double totalSale = milkInLitres * pricePerLitre;
+
+            // Only add if there's a valid sale
+            if (totalSale > 0) {
+              spots.add(FlSpot(dayOfWeek.toDouble(), totalSale));
+            }
+
+            sales += totalSale;
+            milkDistributed += milkInLitres;
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            totalSales = sales;
+            totalMilkDistributed = milkDistributed;
+            chartData = spots.isNotEmpty ? spots : [FlSpot(0, 0)];
+          });
+        }
+
+        print('Total Sales: $totalSales');
+        print('Total Milk Distributed: $totalMilkDistributed');
+        print('Chart Data: $chartData');
+      } catch (e) {
+        print('Error fetching data: $e');
       }
-
-      // Convert daily data into chart data
-      chartData = [];
-      for (int i = 1; i <= 7; i++) {
-        double totalForDay = dailyData[i] ?? 0;
-        chartData.add(
-            FlSpot(i.toDouble(), totalForDay)); // Create FlSpot for each day
-      }
-
-      setState(() {
-        totalSales = sales; // Update total sales
-        totalMilkDistributed = milkDistributed; // Update total milk distributed
-      });
-
-      // Debugging statements
-      print('Total Sales: $totalSales');
-      print('Total Milk Distributed: $totalMilkDistributed');
-      print('Chart Data: $chartData');
+    } else {
+      print('User is not authenticated or admin email is null.');
     }
   }
 
@@ -173,41 +189,40 @@ class _HomePageState extends State<HomePage> {
   //   });
   // }
 
- Future<void> _fetchCounts() async {
-  final userId = FirebaseAuth.instance.currentUser?.uid;
+  Future<void> _fetchCounts() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
 
-  // Count cattle
-  final cattleCount = await FirebaseFirestore.instance
-      .collection('cattle')
-      .where('userId', isEqualTo: userId)
-      .get()
-      .then((snapshot) => snapshot.docs.length);
+    // Count cattle
+    final cattleCount = await FirebaseFirestore.instance
+        .collection('cattle')
+        .where('userId', isEqualTo: userId)
+        .get()
+        .then((snapshot) => snapshot.docs.length);
 
-  // Count workers
-  final workersCount = await FirebaseFirestore.instance
-      .collection('workers')
-      .where('userId', isEqualTo: userId)
-      .get()
-      .then((snapshot) => snapshot.docs.length);
+    // Count workers
+    final workersCount = await FirebaseFirestore.instance
+        .collection('workers')
+        .where('userId', isEqualTo: userId)
+        .get()
+        .then((snapshot) => snapshot.docs.length);
 
-  // Count calves
-  final calvesCount = await FirebaseFirestore.instance
-      .collection('users')
-      .doc(userId)
-      .collection('calves')
-      .get()
-      .then((snapshot) => snapshot.docs.length);
+    // Count calves
+    final calvesCount = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('calves')
+        .get()
+        .then((snapshot) => snapshot.docs.length);
 
-  // Check if the widget is still mounted before calling setState
-  if (mounted) {
-    setState(() {
-      _cattleCount = cattleCount; // Update state variables
-      _workersCount = workersCount;
-      _calvesCount = calvesCount;
-    });
+    // Check if the widget is still mounted before calling setState
+    if (mounted) {
+      setState(() {
+        _cattleCount = cattleCount; // Update state variables
+        _workersCount = workersCount;
+        _calvesCount = calvesCount;
+      });
+    }
   }
-}
-
 
   Future<void> _fetchWeeklyExpenses() async {
     try {
@@ -403,14 +418,26 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, '/workerList');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              WorkerListPage(), // Navigate to Workers List
+                        ),
+                      );
                     },
                     child: const Text('My Employees'),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, '/reports');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              ReportsPage(), // Navigate to reportst
+                        ),
+                      );
                     },
                     child: const Text('Reports'),
                   ),
@@ -461,9 +488,8 @@ class _HomePageState extends State<HomePage> {
                 children: <Widget>[
                   Text('Total Monthly Production in Litres',
                       style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text('Total: $totalMilkDistributed Litres'),
-                  // Calculate and display increase percentage if needed
-                  // Example: Text('Increase: X%'),
+                  Text(
+                      'Total: ${totalMilkDistributed > 0 ? totalMilkDistributed : 'No data'} Litres'),
                 ],
               ),
             ),
@@ -482,9 +508,8 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text('Sales', style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text('Total Sales: Kshs$totalSales'),
-                  // Calculate and display increase percentage if needed
-                  // Example: Text('Increase: Y%'),
+                  Text(
+                      'Total Sales: Kshs${totalSales > 0 ? totalSales : 'No data'}'),
                 ],
               ),
             ),
@@ -497,11 +522,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildOrderStatsCard(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // Navigate to MilkDistributionSales page
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => MilkDistributionSales()),
-        );
+        Navigator.pushNamed(context, '/milkSales');
       },
       child: Card(
         shape: RoundedRectangleBorder(
@@ -531,7 +552,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 Container(
                   margin: const EdgeInsets.only(top: 16.0),
-                  height: 200.0,
+                  height: 300.0,
                   child: LineChart(
                     LineChartData(
                       gridData: FlGridData(show: false),
@@ -543,30 +564,26 @@ class _HomePageState extends State<HomePage> {
                             getTitlesWidget: (value, meta) {
                               int index = value.toInt();
                               if (index >= 1 && index <= 7) {
-                                return Text(
-                                  [
-                                    'Mon',
-                                    'Tue',
-                                    'Wed',
-                                    'Thu',
-                                    'Fri',
-                                    'Sat',
-                                    'Sun'
-                                  ][index - 1],
-                                  style: const TextStyle(color: Colors.black),
-                                );
+                                return Text([
+                                  'Mon',
+                                  'Tue',
+                                  'Wed',
+                                  'Thu',
+                                  'Fri',
+                                  'Sat',
+                                  'Sun'
+                                ][index - 1]);
                               }
-                              return const Text(''); // Empty if out of range
+                              return const Text('');
                             },
                           ),
                         ),
                         leftTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
-                            reservedSize: 60,
+                            reservedSize: 50,
                             getTitlesWidget: (value, meta) {
-                              return Text(value.toInt().toString(),
-                                  style: const TextStyle(color: Colors.black));
+                              return Text(value.toInt().toString());
                             },
                           ),
                         ),
@@ -580,7 +597,6 @@ class _HomePageState extends State<HomePage> {
                           spots: chartData,
                           isCurved: true,
                           color: Colors.green,
-                          barWidth: 3,
                           dotData: FlDotData(show: false),
                           belowBarData: BarAreaData(show: false),
                         ),
@@ -588,10 +604,16 @@ class _HomePageState extends State<HomePage> {
                       minX: 1,
                       maxX: 7,
                       minY: 0,
+                      maxY: chartData.isNotEmpty
+                          ? chartData
+                                  .map((spot) => spot.y)
+                                  .reduce((a, b) => a > b ? a : b) *
+                              1.2
+                          : 1,
                     ),
                   ),
                 ),
-                const SizedBox(height: 8.0), // Space before the hint
+                const SizedBox(height: 8.0),
                 const Text(
                   'Tap for more details',
                   style: TextStyle(
@@ -607,115 +629,116 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-Widget _buildExpenseOverviewCard(BuildContext context) {
-  return Card(
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12.0),
-    ),
-    child: Container(
-      decoration: BoxDecoration(
-        image: const DecorationImage(
-          image: AssetImage(
-              'assets/abstract-light-blue-wide-background-with-radial-blue-gradients-vector.jpg'),
-          fit: BoxFit.cover,
-        ),
+  Widget _buildExpenseOverviewCard(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.0),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const Text(
-              'Weekly Feed Expenses',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-                fontSize: 18,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              height: 200, // Set the height for the chart
-              child: BarChart(
-                BarChartData(
-                  titlesData: FlTitlesData(
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 40,
-                      ),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 20, 
-                        getTitlesWidget: (value, meta) {
-                          return Text(
-                            [
-                              'Mon',
-                              'Tue',
-                              'Wed',
-                              'Thu',
-                              'Fri',
-                              'Sat',
-                              'Sun'
-                            ][value.toInt()],
-                            style: const TextStyle(color: Colors.black),
-                          );
-                        },
-                      ),
-                    ),
-                    rightTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: false), // No right titles
-                    ),
-                    topTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: false), // No top titles
-                    ),
-                  ),
-                  borderData: FlBorderData(show: false), // No borders
-                  barGroups: List.generate(
-                    7,
-                    (index) => BarChartGroupData(
-                      x: index,
-                      barRods: [
-                        BarChartRodData(
-                          toY: dailyExpenses[index],
-                          color: Colors.green,
-                          width: 20, // Increase bar thickness
-                        ),
-                      ],
-                    ),
-                  ),
-                  gridData: FlGridData(show: false), // Remove grid lines
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            GestureDetector(
-              onTap: () {
-                // Navigate to FeedsPage
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => FeedsPage()),
-                );
-              },
-              child: const Text(
-                'Tap for more details',
+      child: Container(
+        decoration: BoxDecoration(
+          image: const DecorationImage(
+            image: AssetImage(
+                'assets/abstract-light-blue-wide-background-with-radial-blue-gradients-vector.jpg'),
+            fit: BoxFit.cover,
+          ),
+          borderRadius: BorderRadius.circular(12.0),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text(
+                'Weekly Feed Expenses',
                 style: TextStyle(
+                  fontWeight: FontWeight.bold,
                   color: Colors.black,
-                  fontStyle: FontStyle.italic,
-                  fontSize: 16,
+                  fontSize: 18,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 10),
+              Container(
+                height: 200, // Set the height for the chart
+                child: BarChart(
+                  BarChartData(
+                    titlesData: FlTitlesData(
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 40,
+                        ),
+                      ),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 20,
+                          getTitlesWidget: (value, meta) {
+                            return Text(
+                              [
+                                'Mon',
+                                'Tue',
+                                'Wed',
+                                'Thu',
+                                'Fri',
+                                'Sat',
+                                'Sun'
+                              ][value.toInt()],
+                              style: const TextStyle(color: Colors.black),
+                            );
+                          },
+                        ),
+                      ),
+                      rightTitles: AxisTitles(
+                        sideTitles:
+                            SideTitles(showTitles: false), // No right titles
+                      ),
+                      topTitles: AxisTitles(
+                        sideTitles:
+                            SideTitles(showTitles: false), // No top titles
+                      ),
+                    ),
+                    borderData: FlBorderData(show: false), // No borders
+                    barGroups: List.generate(
+                      7,
+                      (index) => BarChartGroupData(
+                        x: index,
+                        barRods: [
+                          BarChartRodData(
+                            toY: dailyExpenses[index],
+                            color: Colors.green,
+                            width: 20, // Increase bar thickness
+                          ),
+                        ],
+                      ),
+                    ),
+                    gridData: FlGridData(show: false), // Remove grid lines
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              GestureDetector(
+                onTap: () {
+                  // Navigate to FeedsPage
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => FeedsPage()),
+                  );
+                },
+                child: const Text(
+                  'Tap for more details',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontStyle: FontStyle.italic,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
-
+    );
+  }
 
   List<BarChartGroupData> _createBarChartData() {
     return [
@@ -916,12 +939,7 @@ Widget _buildExpenseOverviewCard(BuildContext context) {
         Expanded(
           child: GestureDetector(
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CattleList(), // Navigate to Cattle List
-                ),
-              );
+              Navigator.pushNamed(context, '/cattleListPage');
             },
             child: _buildInfoCard(
               'Cows',
@@ -953,13 +971,7 @@ Widget _buildExpenseOverviewCard(BuildContext context) {
         Expanded(
           child: GestureDetector(
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      CalvingPage(), // Navigate to Calving Page
-                ),
-              );
+              Navigator.pushNamed(context, '/calving');
             },
             child: _buildInfoCard(
               'Calves',

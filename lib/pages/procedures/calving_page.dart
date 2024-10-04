@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class CalvingPage extends StatefulWidget {
-  const CalvingPage({super.key});
+  final Future<String?> adminEmailFuture;
+  CalvingPage({super.key, required this.adminEmailFuture});
 
   @override
   _CalvingPageState createState() => _CalvingPageState();
@@ -13,24 +14,33 @@ class CalvingPage extends StatefulWidget {
 class _CalvingPageState extends State<CalvingPage> {
   final List<Calf> _calves = [];
   List<String> _motherNames = [];
+  String? _adminEmail;
+
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    setState(() {
+      // Now that admin email is fetched, fetch calves.
+      _fetchCalvesFromFirebase();
+    });
+  }
 
   @override
   void initState() {
     super.initState();
-    _fetchCalvesFromFirebase();
+    _fetchAdminEmail();
   }
 
   Future<void> _fetchCalvesFromFirebase() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) {
-      _showSnackBar('User not logged in');
+    if (_adminEmail == null) {
+      _showSnackBar('Admin email is not set');
       return;
     }
-    final cattleCollection = FirebaseFirestore.instance.collection('cattle');
+
     final calfCollection = FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('calves');
+        .collection('calves')
+        .doc(_adminEmail)
+        .collection('entries');
+
     try {
       // Fetch calves
       final calfSnapshot = await calfCollection.get();
@@ -43,12 +53,18 @@ class _CalvingPageState extends State<CalvingPage> {
           mother: data['mother'],
           gender: data['gender'],
           healthStatus: data['healthStatus'],
+          filledInBy: data['filled_in_by'], // Fetch filled_in_by
         );
       }).toList();
 
-      // Fetch cattle names for dropdown
-      final cattleSnapshot = await cattleCollection.where('userId', isEqualTo: uid).get();
-      _motherNames = cattleSnapshot.docs.map((doc) => doc.data()['name'] as String).toList();
+      // Fetch mother names from the cattle collection
+      final cattleCollection = FirebaseFirestore.instance.collection('cattle');
+      final motherNamesSnapshot =
+          await cattleCollection.doc(_adminEmail).collection('entries').get();
+
+      _motherNames = motherNamesSnapshot.docs
+          .map((doc) => doc.data()['name'] as String)
+          .toList();
 
       setState(() {
         _calves.clear();
@@ -59,32 +75,39 @@ class _CalvingPageState extends State<CalvingPage> {
     }
   }
 
-  void _addNewCalf(Calf newCalf) {
+  void _addNewCalf(Calf newCalf) async {
+    print("Adding new calf: ${newCalf.name}");
+    await _saveCalfToFirebase(newCalf);
     setState(() {
       _calves.add(newCalf);
     });
-    _saveCalfToFirebase(newCalf);
+    print("Clearing form fields");
+    _clearCalfForm();
   }
 
-  void _saveCalfToFirebase(Calf calf) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) {
-      _showSnackBar('User not logged in');
+  Future<void> _saveCalfToFirebase(Calf calf) async {
+    // Ensure the admin email is set
+    if (_adminEmail == null) {
+      _showSnackBar('Admin email is not set');
       return;
     }
 
+    // Reference to the admin's calf collection
+    String currentUserEmail = FirebaseAuth.instance.currentUser?.email ?? '';
     final calfCollection = FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('calves');
+        .collection('calves')
+        .doc(_adminEmail) // Use the admin's email as the document ID
+        .collection('entries'); // Fetch from the 'entries' subcollection
 
     try {
       await calfCollection.add({
+        'admin_email': _adminEmail, // Optionally include the admin email
         'name': calf.name,
         'birthDate': calf.birthDate,
         'mother': calf.mother,
         'gender': calf.gender,
         'healthStatus': calf.healthStatus,
+        'filled_in_by': currentUserEmail
       });
       _showSnackBar('Calf record saved successfully!');
     } catch (error) {
@@ -93,50 +116,97 @@ class _CalvingPageState extends State<CalvingPage> {
   }
 
   void _updateCalf(Calf calf) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) {
-      _showSnackBar('User not logged in');
+    if (_adminEmail == null) {
+      _showSnackBar('Admin email is not set');
       return;
     }
 
-    final calfDoc =
-        FirebaseFirestore.instance.collection('users').doc(uid).collection('calves').doc(calf.id);
+    final calfDoc = FirebaseFirestore.instance
+        .collection('calves')
+        .doc(_adminEmail)
+        .collection('entries')
+        .doc(calf.id);
 
     try {
       await calfDoc.update({
         'name': calf.name,
         'birthDate': calf.birthDate,
-        'mother': calf.mother,
         'gender': calf.gender,
         'healthStatus': calf.healthStatus,
       });
+
+      if (!mounted) return; // Check if the widget is still mounted
       _showSnackBar('Calf record updated successfully!');
-      _fetchCalvesFromFirebase(); // Refresh list
+
+      // Refresh the list after updating
+      await _fetchCalvesFromFirebase();
+
+      _clearCalfForm(); // Call to clear the fields after updating
     } catch (error) {
-      _showSnackBar('Failed to update calf record: $error');
+      if (!mounted) return; // Check if the widget is still mounted
+      _showSnackBar('Failed to update calf record: ${error.toString()}');
     }
   }
 
+  void _clearCalfForm() {
+    final calfFormState = context.findAncestorStateOfType<__CalfFormState>();
+    calfFormState?.clearFields(); // Ensure you have access to the clear method
+  }
+
   void _deleteCalf(String calfId) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) {
-      _showSnackBar('User not logged in');
+    // Ensure the admin email is set
+    if (_adminEmail == null) {
+      _showSnackBar('Admin email is not set');
       return;
     }
 
+    // Check if calfId is valid
+    if (calfId.isEmpty) {
+      _showSnackBar('Calf ID is not valid');
+      return;
+    }
+
+    // Reference to the specific calf document
     final calfDoc = FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
         .collection('calves')
-        .doc(calfId);
+        .doc(_adminEmail) // Use admin's email as document ID
+        .collection('entries')
+        .doc(calfId); // Use the calfId directly
+
+    // Log the document path for debugging
+    print(
+        'Attempting to delete calf with ID: $calfId at path: ${calfDoc.path}');
 
     try {
+      // Attempt to delete the calf document
       await calfDoc.delete();
       _showSnackBar('Calf record deleted successfully!');
-      _fetchCalvesFromFirebase(); // Refresh list
+
+      // Refresh the list of calves
+      _fetchCalvesFromFirebase();
     } catch (error) {
-      _showSnackBar('Failed to delete calf record: $error');
+      // Handle any errors during deletion
+      _showSnackBar('Failed to delete calf record: ${error.toString()}');
     }
+  }
+
+  Future<void> _fetchMotherNamesFromFirebase() async {
+    if (_adminEmail == null) {
+      _showSnackBar('Admin email is not set');
+      return;
+    }
+
+    final cattleCollection = FirebaseFirestore.instance.collection('cattle');
+    final motherNamesSnapshot =
+        await cattleCollection.doc(_adminEmail).collection('entries').get();
+
+    _motherNames = motherNamesSnapshot.docs
+        .map((doc) => doc.data()['name'] as String)
+        .toList();
+
+    setState(() {
+      // Optionally refresh UI if needed
+    });
   }
 
   @override
@@ -270,29 +340,40 @@ class _CalvingPageState extends State<CalvingPage> {
   }
 
   Widget _buildCalfRecordTile(Calf calf) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
-      title:
-          Text(calf.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text(
-          'Birth Date: ${DateFormat.yMMMd().format(calf.birthDate)}\nMother: ${calf.mother}'),
-      leading: Icon(Icons.pets, color: Colors.blueAccent),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            icon: Icon(Icons.edit, color: Colors.grey),
-            onPressed: () {
-              _showCalfForm(context, calf);
-            },
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CalfDetailsPage(calf: calf),
           ),
-          IconButton(
-            icon: Icon(Icons.delete, color: Colors.red),
-            onPressed: () {
-              _confirmDelete(calf.id);
-            },
-          ),
-        ],
+        );
+      },
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
+        title: Text(calf.name,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(
+          'Birth Date: ${DateFormat.yMMMd().format(calf.birthDate)}\nMother: ${calf.mother}',
+        ),
+        leading: Icon(Icons.pets, color: Colors.blueAccent),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(Icons.edit, color: Colors.grey),
+              onPressed: () {
+                _showCalfForm(context, calf);
+              },
+            ),
+            IconButton(
+              icon: Icon(Icons.delete, color: Colors.red),
+              onPressed: () {
+                _confirmDelete(calf.id);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -362,26 +443,30 @@ class _CalvingPageState extends State<CalvingPage> {
   }
 
   void _showCalfForm(BuildContext context, Calf? calf) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: _CalfForm(
-            calf: calf,
-            onSubmit: (updatedCalf) {
-              if (calf == null) {
-                _addNewCalf(updatedCalf);
-              } else {
-                _updateCalf(updatedCalf);
-              }
-              Navigator.pop(context);
-            },
-          ),
-        );
-      },
-    );
-  }
+  showModalBottomSheet(
+    context: context,
+    builder: (context) {
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: _CalfForm(
+          calf: calf,
+          onSubmit: (updatedCalf) {
+            if (calf == null) {
+              _addNewCalf(updatedCalf); // Adding new calf
+            } else {
+              _updateCalf(updatedCalf); // Updating existing calf
+            }
+            Navigator.pop(context); // Close the modal after submission
+          },
+        ),
+      );
+    },
+  ).then((_) {
+    // After the modal closes, clear the fields
+    _clearCalfForm();
+  });
+}
+
 
   Future<void> _confirmDelete(String calfId) async {
     final shouldDelete = await showDialog<bool>(
@@ -427,10 +512,20 @@ class _CalfForm extends StatefulWidget {
 class __CalfFormState extends State<_CalfForm> {
   final _nameController = TextEditingController();
   final _birthDateController = TextEditingController();
-  final _motherController = TextEditingController();
-  String _mother = ''; 
+  String _mother = '';
   String _gender = 'Male';
   String _healthStatus = 'Healthy';
+
+  // Method to clear the form fields
+  void clearFields() {
+    _nameController.clear();
+    _birthDateController.clear();
+    setState(() {
+      _mother = '';
+      _gender = 'Male';
+      _healthStatus = 'Healthy';
+    });
+  }
 
   @override
   void initState() {
@@ -439,7 +534,7 @@ class __CalfFormState extends State<_CalfForm> {
       _nameController.text = widget.calf!.name;
       _birthDateController.text =
           DateFormat.yMMMd().format(widget.calf!.birthDate);
-      _motherController.text = widget.calf!.mother;
+      _mother = widget.calf!.mother;
       _gender = widget.calf!.gender;
       _healthStatus = widget.calf!.healthStatus;
     }
@@ -447,7 +542,11 @@ class __CalfFormState extends State<_CalfForm> {
 
   @override
   Widget build(BuildContext context) {
-    final calvingPageState = context.findAncestorStateOfType<_CalvingPageState>();
+    final calvingPageState =
+        context.findAncestorStateOfType<_CalvingPageState>();
+
+    // Get the current user's email
+    String filledInBy = FirebaseAuth.instance.currentUser?.email ?? '';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -483,25 +582,27 @@ class __CalfFormState extends State<_CalfForm> {
           },
         ),
         const SizedBox(height: 16.0),
-        DropdownButtonFormField<String>(
-          value: _mother.isNotEmpty ? _mother : null,
-          decoration: InputDecoration(
-            labelText: 'Mother Name',
-            border: OutlineInputBorder(),
+        if (widget.calf == null) ...[
+          DropdownButtonFormField<String>(
+            value: _mother.isNotEmpty ? _mother : null,
+            decoration: InputDecoration(
+              labelText: 'Mother Name',
+              border: OutlineInputBorder(),
+            ),
+            items: calvingPageState?._motherNames.map((name) {
+              return DropdownMenuItem<String>(
+                value: name,
+                child: Text(name),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _mother = value!;
+              });
+            },
           ),
-          items: calvingPageState?._motherNames.map((name) {
-            return DropdownMenuItem<String>(
-              value: name,
-              child: Text(name),
-            );
-          }).toList(),
-          onChanged: (value) {
-            setState(() {
-              _mother = value!;
-            });
-          },
-        ),
-        const SizedBox(height: 16.0),
+          const SizedBox(height: 16.0),
+        ],
         DropdownButtonFormField<String>(
           value: _gender,
           decoration: InputDecoration(
@@ -543,16 +644,17 @@ class __CalfFormState extends State<_CalfForm> {
         ElevatedButton(
           onPressed: () {
             if (_nameController.text.isNotEmpty &&
-                _birthDateController.text.isNotEmpty &&
-                _mother.isNotEmpty) {
+                _birthDateController.text.isNotEmpty) {
               widget.onSubmit(
                 Calf(
                   id: widget.calf?.id ?? '',
                   name: _nameController.text,
-                  birthDate: DateFormat.yMMMd().parse(_birthDateController.text),
-                  mother: _mother,
+                  birthDate:
+                      DateFormat.yMMMd().parse(_birthDateController.text),
+                  mother: widget.calf?.mother ?? _mother,
                   gender: _gender,
                   healthStatus: _healthStatus,
+                  filledInBy: filledInBy,
                 ),
               );
             } else {
@@ -575,6 +677,7 @@ class Calf {
   final String mother;
   final String gender;
   final String healthStatus;
+  final String filledInBy;
 
   Calf({
     required this.id,
@@ -583,5 +686,75 @@ class Calf {
     required this.mother,
     required this.gender,
     required this.healthStatus,
+    required this.filledInBy,
   });
+}
+
+class CalfDetailsPage extends StatelessWidget {
+  final Calf calf;
+
+  const CalfDetailsPage({Key? key, required this.calf}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${calf.name} Details'),
+        backgroundColor: Colors.blueAccent,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDetailCard(Icons.pets, 'Name', calf.name),
+              SizedBox(height: 16),
+              _buildDetailCard(Icons.calendar_today, 'Birth Date',
+                  DateFormat.yMMMd().format(calf.birthDate)),
+              SizedBox(height: 16),
+              _buildDetailCard(Icons.woman, 'Mother', calf.mother),
+              SizedBox(height: 16),
+              _buildDetailCard(Icons.male, 'Gender', calf.gender),
+              SizedBox(height: 16),
+              _buildDetailCard(
+                  Icons.health_and_safety, 'Health Status', calf.healthStatus),
+              SizedBox(height: 16),
+              _buildDetailCard(Icons.person, 'Filled In By', calf.filledInBy),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailCard(IconData icon, String title, String value) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Icon(icon, size: 30, color: Colors.blueAccent),
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 4),
+                  Text(value, style: TextStyle(fontSize: 18)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -1,3 +1,4 @@
+import 'package:dairy_harbor/pages/inventory/user_profile.dart';
 import 'package:dairy_harbor/services_functions/auth_service.dart';
 import 'package:flutter/material.dart';
 
@@ -30,7 +31,12 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                 title: const Text('My Profile'),
                 onTap: () {
                   Navigator.pop(context);
-                  Navigator.pushNamed(context, '/userProfile');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => UserProfile(),
+                    ),
+                  );
                 },
               ),
             ),
@@ -40,7 +46,12 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
                 title: const Text('Edit Profile'),
                 onTap: () {
                   Navigator.pop(context);
-                  Navigator.pushNamed(context, '/editProfile');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EditProfilePage(),
+                    ),
+                  );
                 },
               ),
             ),

@@ -1,5 +1,3 @@
-import 'package:dairy_harbor/pages/manage_cattle/cattle_list_page.dart';
-import 'package:dairy_harbor/pages/milk/milk_distribution_sales.dart';
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -77,12 +75,7 @@ class InventoryMainPage extends StatelessWidget {
                                   totalCows,
                                   Icons.pets,
                                   () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => CattleList(),
-                                      ),
-                                    );
+                                    Navigator.pushNamed(context, '/cattleListPage');
                                   },
                                 ),
                                 _buildStatCard(
@@ -90,13 +83,7 @@ class InventoryMainPage extends StatelessWidget {
                                   '$milkProduction Liters',
                                   Icons.local_drink,
                                   () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            MilkDistributionSales(),
-                                      ),
-                                    );
+                                    Navigator.pushNamed(context, '/milkSales');
                                   },
                                 ),
                                 _buildStatCard(

@@ -1,12 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import 'cattle_profile_page.dart';
-
 class CattleList extends StatefulWidget {
-  const CattleList({super.key});
+  final Future<String?> adminEmailFuture;
+
+  const CattleList({super.key, required this.adminEmailFuture});
 
   @override
   _CattleListState createState() => _CattleListState();
@@ -15,10 +14,12 @@ class CattleList extends StatefulWidget {
 class _CattleListState extends State<CattleList> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  String? _adminEmail;
 
   @override
   void initState() {
     super.initState();
+    _fetchAdminEmail();
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
@@ -26,10 +27,13 @@ class _CattleListState extends State<CattleList> {
     });
   }
 
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
-    final userId = FirebaseAuth.instance.currentUser?.uid; 
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Cattle List'),
@@ -57,11 +61,17 @@ class _CattleListState extends State<CattleList> {
       body: Container(
         color: Colors.grey[200],
         child: StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('cattle')
-              .where('userId', isEqualTo: userId) // Filter by user ID
-              .orderBy('createdAt', descending: true)
-              .snapshots(),
+          stream: _adminEmail != null
+              ? FirebaseFirestore.instance
+                  .collection('cattle')
+                  .doc(_adminEmail) // Use adminEmail as the document ID
+                  .collection('entries') // Access the 'entries' sub-collection
+                  .orderBy('created_at',
+                      descending:
+                          true) // Use 'created_at' as per your saving structure
+                  .snapshots()
+              : Stream
+                  .empty(), // Handle case where adminEmail is not yet available
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -76,17 +86,21 @@ class _CattleListState extends State<CattleList> {
               final cattleData = doc.data() as Map<String, dynamic>;
               final name = cattleData['name']?.toLowerCase() ?? '';
               final breed = cattleData['breed']?.toLowerCase() ?? '';
-              return name.contains(_searchQuery) || breed.contains(_searchQuery);
+              return name.contains(_searchQuery) ||
+                  breed.contains(_searchQuery);
             }).toList();
 
             return ListView.builder(
               padding: const EdgeInsets.all(8.0),
               itemCount: filteredCattleDocs.length,
               itemBuilder: (context, index) {
-                var cattleData = filteredCattleDocs[index].data() as Map<String, dynamic>;
-                var createdAt = cattleData['createdAt'] as Timestamp?;
+                var cattleData =
+                    filteredCattleDocs[index].data() as Map<String, dynamic>;
+                var createdAt = cattleData['created_at']
+                    as Timestamp?; // Match the saved key
                 var timestamp = createdAt != null
-                    ? DateFormat('yyyy-MM-dd HH:mm:ss').format(createdAt.toDate())
+                    ? DateFormat('yyyy-MM-dd HH:mm:ss')
+                        .format(createdAt.toDate())
                     : 'NA';
 
                 return Card(
@@ -95,11 +109,13 @@ class _CattleListState extends State<CattleList> {
                   child: ListTile(
                     contentPadding: const EdgeInsets.all(16.0),
                     leading: CircleAvatar(
-                      backgroundImage: cattleData['imageUrl'] != null
-                          ? NetworkImage(cattleData['imageUrl'])
-                          : null,
-                      child: cattleData['imageUrl'] == null
-                          ? const Icon(Icons.pets, size: 40, color: Colors.white)
+                      backgroundImage:
+                          cattleData['image_url'] != null // Match the saved key
+                              ? NetworkImage(cattleData['image_url'])
+                              : null,
+                      child: cattleData['image_url'] == null
+                          ? const Icon(Icons.pets,
+                              size: 40, color: Colors.white)
                           : null,
                       backgroundColor: Colors.grey[400],
                     ),
@@ -111,16 +127,20 @@ class _CattleListState extends State<CattleList> {
                       'Breed: ${cattleData['breed']}\nAdded on: $timestamp',
                       style: const TextStyle(fontSize: 14),
                     ),
-                    trailing: const Icon(Icons.arrow_forward_ios, color: Colors.blue),
+                    trailing:
+                        const Icon(Icons.arrow_forward_ios, color: Colors.blue),
                     onTap: () {
-                      Navigator.push(
+                      String cattleId =
+                          filteredCattleDocs[index].id; // Get the cattle ID
+
+                      Navigator.pushNamed(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => CattleProfilePage(
-                            cattleId: filteredCattleDocs[index].id,
-                            index: index,
-                          ),
-                        ),
+                        '/cattleProfile',
+                        arguments: {
+                          'cattleId': cattleId,
+                          'index': index,
+                          'adminEmailFuture': widget.adminEmailFuture,
+                        },
                       );
                     },
                   ),

@@ -3,6 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class ArtificialInseminationPage extends StatefulWidget {
+  final Future<String?> adminEmailFuture;
+
+  ArtificialInseminationPage({required this.adminEmailFuture});
+
   @override
   _ArtificialInseminationPageState createState() =>
       _ArtificialInseminationPageState();
@@ -19,8 +23,20 @@ class _ArtificialInseminationPageState
   String? _selectedBreed;
   String? _selectedSexed;
   String? _currentDocId;
+  String? _adminEmail;
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
+
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAdminEmail();
+  }
 
   @override
   void dispose() {
@@ -128,7 +144,7 @@ class _ArtificialInseminationPageState
               Container(
                 width: double.infinity,
                 child: StreamBuilder<QuerySnapshot>(
-                  stream: _getUserSpecificStream(),
+                  stream: _getAdminSpecificStream(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return Center(child: CircularProgressIndicator());
@@ -149,6 +165,7 @@ class _ArtificialInseminationPageState
                           DataColumn(label: Text('Vet Name')),
                           DataColumn(label: Text('Donor Breed')),
                           DataColumn(label: Text('Cost')),
+                          DataColumn(label: Text('Filled_in_by')),
                           DataColumn(label: Text('Actions')),
                         ],
                         rows: data.docs.map<DataRow>((doc) {
@@ -159,6 +176,7 @@ class _ArtificialInseminationPageState
                             DataCell(Text(fields['vetName'] ?? 'N/A')),
                             DataCell(Text(fields['breed'] ?? 'N/A')),
                             DataCell(Text(fields['cost'] ?? 'N/A')),
+                            DataCell(Text(fields['filled_in_by'] ?? 'N/A')),
                             DataCell(
                               Row(
                                 children: [
@@ -188,15 +206,16 @@ class _ArtificialInseminationPageState
     );
   }
 
-  Stream<QuerySnapshot> _getUserSpecificStream() {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) {
-      throw Exception('User not logged in');
-    }
+  Stream<QuerySnapshot> _getAdminSpecificStream() {
+    // Ensure the admin email is set
+    // if (_adminEmail == null) {
+    //   throw Exception('Admin email is not set');
+    // }
+
     return FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
         .collection('artificial_inseminations')
+        .doc(_adminEmail) // Use the admin's email as the document ID
+        .collection('entries') // Fetch from the 'entries' subcollection
         .limit(50)
         .snapshots();
   }
@@ -256,6 +275,7 @@ class _ArtificialInseminationPageState
                     );
                   },
                 ),
+
                 SizedBox(height: 10),
 
                 TextFormField(
@@ -275,7 +295,7 @@ class _ArtificialInseminationPageState
                       context: context,
                       initialDate: DateTime.now(),
                       firstDate: DateTime(2000),
-                      lastDate: DateTime(2101),
+                      lastDate: DateTime.now(),
                     );
                     if (pickedDate != null) {
                       setState(() {
@@ -331,7 +351,7 @@ class _ArtificialInseminationPageState
                 ),
                 SizedBox(height: 10),
 
-// Updated Sexed Semen Dropdown
+                // Updated Sexed Semen Dropdown
                 DropdownButtonFormField<String>(
                   decoration: InputDecoration(labelText: 'Select Sexed Semen'),
                   value: _selectedSexed,
@@ -399,74 +419,106 @@ class _ArtificialInseminationPageState
   }
 
   Future<List<String>> _fetchCattleFromDatabase() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) {
-      throw Exception('User not logged in');
+    if (_adminEmail == null) {
+      throw Exception('Admin email is not set');
     }
 
-    final snapshot = await FirebaseFirestore.instance
-        .collection('cattle')
-        .where('userId', isEqualTo: uid)
-        .get();
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('cattle')
+          .doc(_adminEmail) // Use the admin's email as the document ID
+          .collection('entries') // Fetch from the 'entries' subcollection
+          .get();
 
-    return snapshot.docs.map((doc) => doc.data()['name'] as String).toList();
+      // Ensure documents exist before mapping
+      if (snapshot.docs.isEmpty) {
+        return []; // Return an empty list if no documents
+      }
+
+      // Map the documents to their names
+      return snapshot.docs.map((doc) {
+        // Make sure the name field exists
+        final name = doc.data()['name'];
+        return name != null ? name as String : ''; // Avoid null values
+      }).toList();
+    } catch (e) {
+      print('Error fetching cattle: $e');
+      throw Exception('Failed to fetch cattle: $e');
+    }
   }
 
   Future<void> _submitData(BuildContext context) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
+    String currentUserEmail = FirebaseAuth.instance.currentUser?.email ?? '';
     if (uid == null) {
       _showSnackBar('User not logged in');
       return;
     }
 
-    try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .collection('artificial_inseminations')
-          .add({
-        'date': _dateController.text,
-        'serialNumber': _serialNumberController.text,
-        'vetName': _vetNameController.text,
-        'breed': _selectedBreed,
-        'sexed': _selectedSexed,
-        'notes': _notesController.text,
-        'cattle': _selectedCattle,
-        'cost': _costController.text,
-      });
-      _showSnackBar('AI record added successfully');
-      _resetForm();
-    } catch (e) {
-      _showSnackBar('Failed to add record: $e');
+    if (_adminEmail != null) {
+      // Ensure adminEmail is not null
+      try {
+        // Save data in the admin's collection
+        await FirebaseFirestore.instance
+            .collection('artificial_inseminations')
+            .doc(_adminEmail)
+            .collection('entries')
+            .add({
+          'date': _dateController.text,
+          'serialNumber': _serialNumberController.text,
+          'vetName': _vetNameController.text,
+          'breed': _selectedBreed,
+          'sexed': _selectedSexed,
+          'notes': _notesController.text,
+          'cattle': _selectedCattle,
+          'cost': _costController.text,
+          'filled_in_by': currentUserEmail, //track who filled it in
+        });
+
+        _showSnackBar('AI record added successfully');
+        _resetForm();
+      } catch (e) {
+        _showSnackBar('Failed to add record: $e');
+      }
+    } else {
+      // Handle the case where _adminEmail is null
+      _showSnackBar('Admin email not set');
     }
   }
 
   Future<void> _updateData(BuildContext context, String docId) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
+    String currentUserEmail = FirebaseAuth.instance.currentUser?.email ?? '';
     if (uid == null) {
       _showSnackBar('User not logged in');
       return;
     }
 
-    try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .collection('artificial_inseminations')
-          .doc(docId)
-          .update({
-        'date': _dateController.text,
-        'serialNumber': _serialNumberController.text,
-        'vetName': _vetNameController.text,
-        'breed': _selectedBreed,
-        'sexed': _selectedSexed,
-        'notes': _notesController.text,
-        'cattle': _selectedCattle,
-        'cost': _costController.text,
-      });
-      _showSnackBar('AI record updated successfully');
-    } catch (e) {
-      _showSnackBar('Failed to update record: $e');
+    if (_adminEmail != null) {
+      // Ensure adminEmail is not null
+      try {
+        await FirebaseFirestore.instance
+            .collection('artificial_inseminations')
+            .doc(_adminEmail)
+            .collection('entries')
+            .doc(docId)
+            .update({
+          'date': _dateController.text,
+          'serialNumber': _serialNumberController.text,
+          'vetName': _vetNameController.text,
+          'breed': _selectedBreed,
+          'sexed': _selectedSexed,
+          'notes': _notesController.text,
+          'cattle': _selectedCattle,
+          'cost': _costController.text,
+          'filled_in_by': currentUserEmail,
+        });
+        _showSnackBar('AI record updated successfully');
+      } catch (e) {
+        _showSnackBar('Failed to update record: $e');
+      }
+    } else {
+      _showSnackBar('Admin email not set');
     }
   }
 
@@ -477,31 +529,36 @@ class _ArtificialInseminationPageState
       return;
     }
 
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .collection('artificial_inseminations')
-          .doc(docId)
-          .get();
-      if (doc.exists) {
-        final fields = doc.data() as Map<String, dynamic>;
-        if (mounted) {
-          setState(() {
-            _currentDocId = docId;
-            _selectedCattle = fields['cattle'];
-            _dateController.text = fields['date'] ?? '';
-            _vetNameController.text = fields['vetName'] ?? '';
-            _selectedBreed = fields['breed'];
-            _selectedSexed = fields['sexed'];
-            _serialNumberController.text = fields['serialNumber'] ?? '';
-            _notesController.text = fields['notes'] ?? '';
-            _costController.text = fields['cost']?.toString() ?? '';
-          });
+    if (_adminEmail != null) {
+      // Ensure adminEmail is not null
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('artificial_inseminations')
+            .doc(_adminEmail)
+            .collection('entries')
+            .doc(docId)
+            .get();
+        if (doc.exists) {
+          final fields = doc.data() as Map<String, dynamic>;
+          if (mounted) {
+            setState(() {
+              _currentDocId = docId;
+              _selectedCattle = fields['cattle'];
+              _dateController.text = fields['date'] ?? '';
+              _vetNameController.text = fields['vetName'] ?? '';
+              _selectedBreed = fields['breed'];
+              _selectedSexed = fields['sexed'];
+              _serialNumberController.text = fields['serialNumber'] ?? '';
+              _notesController.text = fields['notes'] ?? '';
+              _costController.text = fields['cost']?.toString() ?? '';
+            });
+          }
         }
+      } catch (error) {
+        _showSnackBar('Failed to load document: $error');
       }
-    } catch (error) {
-      _showSnackBar('Failed to load document: $error');
+    } else {
+      _showSnackBar('Admin email not set');
     }
   }
 
@@ -525,22 +582,27 @@ class _ArtificialInseminationPageState
     );
 
     if (shouldDelete == true) {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final uid = FirebaseAuth.instance.currentUser;
       if (uid == null) {
         _showSnackBar('User not logged in');
         return;
       }
 
-      try {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .collection('artificial_inseminations')
-            .doc(docId)
-            .delete();
-        _showSnackBar('Record deleted successfully');
-      } catch (e) {
-        _showSnackBar('Failed to delete record: $e');
+      if (_adminEmail != null) {
+        // Ensure adminEmail is not null
+        try {
+          await FirebaseFirestore.instance
+              .collection('artificial_inseminations')
+              .doc(_adminEmail)
+              .collection('entries')
+              .doc(docId)
+              .delete();
+          _showSnackBar('Record deleted successfully');
+        } catch (e) {
+          _showSnackBar('Failed to delete record: $e');
+        }
+      } else {
+        _showSnackBar('Admin email not set');
       }
     }
   }

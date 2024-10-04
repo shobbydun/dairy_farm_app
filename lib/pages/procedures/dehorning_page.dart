@@ -3,7 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class DehorningPage extends StatefulWidget {
-  const DehorningPage({Key? key}) : super(key: key);
+  final Future<String?> adminEmailFuture;
+
+  DehorningPage({required this.adminEmailFuture});
 
   @override
   _DehorningPageState createState() => _DehorningPageState();
@@ -12,28 +14,55 @@ class DehorningPage extends StatefulWidget {
 class _DehorningPageState extends State<DehorningPage> {
   List<QueryDocumentSnapshot> cattleRecords = [];
   final TextEditingController costController = TextEditingController();
+  String? _adminEmail;
+  String? _snackBarMessage; 
 
   @override
   void initState() {
     super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_adminEmail == null) {
+      _fetchAdminEmail();
+    }
+    // Only fetch cattle records once _adminEmail is set
+    if (_adminEmail != null) {
+      _fetchCattleRecords();
+    }
+  }
+
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    setState(() {});
+    // After setting _adminEmail, fetch cattle records
     _fetchCattleRecords();
   }
 
   Future<void> _fetchCattleRecords() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) {
-      _showSnackBar('User not logged in.');
+    if (_adminEmail == null) {
+      _showSnackBar('Admin email is not set.');
       return;
     }
 
-    final snapshot = await FirebaseFirestore.instance
-        .collection('cattle')
-        .where('userId', isEqualTo: userId)
-        .get();
-    setState(() {
-      cattleRecords = snapshot.docs;
-    });
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('cattle')
+          .doc(_adminEmail)
+          .collection('entries')
+          .get();
+
+      setState(() {
+        cattleRecords = snapshot.docs; // Keep the original type as List<QueryDocumentSnapshot>
+      });
+    } catch (e) {
+      print('Error fetching cattle records: $e');
+      _showSnackBar('Failed to fetch cattle records: $e');
+    }
   }
+
 
   void _submitProcedureDetails(String cattleId, String date, String vetName,
       String? method, String notes, double cost) async {
@@ -43,66 +72,81 @@ class _DehorningPageState extends State<DehorningPage> {
       return;
     }
 
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('dehorning')
-        .add({
-      'cattle_id': cattleId,
-      'date': date,
-      'veterinarian': vetName,
-      'method': method,
-      'notes': notes,
-      'cost': cost,
-      'isCompleted': false,
-    });
+    if (_adminEmail != null) {
+      await FirebaseFirestore.instance
+          .collection('dehorning')
+          .doc(_adminEmail) // Using adminEmail as the document ID
+          .collection('entries')
+          .add({
+        'cattle_id': cattleId,
+        'date': date,
+        'veterinarian': vetName,
+        'method': method,
+        'notes': notes,
+        'cost': cost,
+        'isCompleted': false,
+      });
+    }
   }
 
-  void _updateRecord(String id, String cattleId, String date,
-      String vetName, String? method, double cost) async {
+void _updateRecord(String id, String cattleId, String date, String vetName,
+      String? method, double cost) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) {
       _showSnackBar('User not logged in.');
       return;
     }
 
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('dehorning')
-        .doc(id)
-        .update({
-      'cattle_id': cattleId,
-      'date': date,
-      'veterinarian': vetName,
-      'method': method,
-      'cost': cost,
-    });
+    if (_adminEmail != null) {
+      await FirebaseFirestore.instance
+          .collection('dehorning')
+          .doc(_adminEmail) // Using adminEmail as the document ID
+          .collection('entries')
+          .doc(id)
+          .update({
+        'cattle_id': cattleId,
+        'date': date,
+        'veterinarian': vetName,
+        'method': method,
+        'cost': cost,
+      });
+    }
   }
 
-  void _updateCompletionStatus(String id, bool isCompleted) async {
+void _updateCompletionStatus(String id, bool isCompleted) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) {
       _showSnackBar('User not logged in.');
       return;
     }
 
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('dehorning')
-        .doc(id)
-        .update({
-      'isCompleted': isCompleted,
-    });
-  }
+    if (_adminEmail != null) {
+      await FirebaseFirestore.instance
+          .collection('dehorning')
+          .doc(_adminEmail) // Using adminEmail as the document ID
+          .collection('entries')
+          .doc(id)
+          .update({
+        'isCompleted': isCompleted,
+      });
+    }
+}
 
   void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
+
+     // Show SnackBar if there's a message
+    if (_snackBarMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showSnackBar(_snackBarMessage!);
+        _snackBarMessage = null; // Clear the message after showing
+      });
+    }
     final userId = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
@@ -129,23 +173,30 @@ class _DehorningPageState extends State<DehorningPage> {
     );
   }
 
-  Widget _buildDashboardOverview() {
+ Widget _buildDashboardOverview() {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      return Center(child: Text('User not logged in.'));
+    }
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
-                .collection('users')
-                .doc(FirebaseAuth.instance.currentUser?.uid)
                 .collection('dehorning')
+                .doc(_adminEmail) // Assuming _adminEmail is set correctly
+                .collection('entries')
                 .snapshots(),
             builder: (context, snapshot) {
               if (!snapshot.hasData) return Container();
 
               final records = snapshot.data!.docs;
               final totalDehornings = records.length;
-              final pendingProcedures = records.where((record) => !(record['isCompleted'] ?? false)).length;
+              final pendingProcedures = records
+                  .where((record) => !(record['isCompleted'] ?? false))
+                  .length;
 
               return Row(
                 children: [
@@ -173,7 +224,9 @@ class _DehorningPageState extends State<DehorningPage> {
     );
   }
 
-  Widget _buildDashboardCard(BuildContext context, String title, IconData icon, Color color) {
+
+  Widget _buildDashboardCard(
+      BuildContext context, String title, IconData icon, Color color) {
     return Expanded(
       child: Card(
         elevation: 4,
@@ -191,7 +244,12 @@ class _DehorningPageState extends State<DehorningPage> {
     );
   }
 
-  Widget _buildRecentActivities() {
+ Widget _buildRecentActivities() {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      return Center(child: Text('User not logged in.'));
+    }
+
     return Card(
       elevation: 5,
       child: Padding(
@@ -201,14 +259,17 @@ class _DehorningPageState extends State<DehorningPage> {
           children: [
             Text(
               'Recent Activities',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.blueAccent),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(color: Colors.blueAccent),
             ),
             SizedBox(height: 16),
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(FirebaseAuth.instance.currentUser?.uid)
                   .collection('dehorning')
+                  .doc(_adminEmail)
+                  .collection('entries')
                   .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return Container();
@@ -243,7 +304,8 @@ class _DehorningPageState extends State<DehorningPage> {
     );
   }
 
-  Widget _buildDehorningRecords(String? userId) {
+
+ Widget _buildDehorningRecords(String? userId) {
     if (userId == null) {
       return Center(child: Text('User not logged in.'));
     }
@@ -255,18 +317,22 @@ class _DehorningPageState extends State<DehorningPage> {
         children: [
           Text(
             'Dehorning Records',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.blueAccent),
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(color: Colors.blueAccent),
           ),
           SizedBox(height: 16),
           Card(
             elevation: 5,
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(userId)
                   .collection('dehorning')
+                  .doc(_adminEmail)
+                  .collection('entries')
                   .snapshots(),
-              builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+              builder: (BuildContext context,
+                  AsyncSnapshot<QuerySnapshot> snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(child: CircularProgressIndicator());
                 }
@@ -307,7 +373,9 @@ class _DehorningPageState extends State<DehorningPage> {
                               IconButton(
                                 icon: const Icon(Icons.edit),
                                 onPressed: () {
-                                  costController.text = data['cost']?.toString() ?? ''; // Set the cost for editing
+                                  costController.text =
+                                      data['cost']?.toString() ??
+                                          ''; // Set the cost for editing
                                   _showDehorningModal(
                                     id: id,
                                     cattleId: data['cattle_id'],
@@ -338,41 +406,46 @@ class _DehorningPageState extends State<DehorningPage> {
     );
   }
 
-  void _deleteRecord(String id) async {
-    final shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirm Deletion'),
-          content: const Text('Are you sure you want to delete this record?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Delete'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-          ],
-        );
-      },
-    ) ?? false;
 
-    if (shouldDelete) {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId == null) {
-        _showSnackBar('User not logged in.');
-        return;
-      }
+ void _deleteRecord(String id) async {
+  final shouldDelete = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Confirm Deletion'),
+            content: const Text('Are you sure you want to delete this record?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Delete'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+            ],
+          );
+        },
+      ) ?? false;
+
+  if (shouldDelete) {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      _showSnackBar('User not logged in.');
+      return;
+    }
+
+    if (_adminEmail != null) {
       await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
           .collection('dehorning')
+          .doc(_adminEmail) // Using adminEmail as the document ID
+          .collection('entries')
           .doc(id)
           .delete();
     }
   }
+}
+
 
   void _showDehorningModal(
       {String? id,
@@ -396,7 +469,7 @@ class _DehorningPageState extends State<DehorningPage> {
         context: context,
         initialDate: selectedDate ?? currentDate,
         firstDate: DateTime(2000),
-        lastDate: DateTime(2101),
+        lastDate: DateTime.now(),
       );
 
       if (pickedDate != null && pickedDate != selectedDate) {
@@ -409,7 +482,8 @@ class _DehorningPageState extends State<DehorningPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(id == null ? 'Schedule Dehorning' : 'Edit Dehorning Record'),
+          title:
+              Text(id == null ? 'Schedule Dehorning' : 'Edit Dehorning Record'),
           content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -432,7 +506,8 @@ class _DehorningPageState extends State<DehorningPage> {
                 ),
                 TextField(
                   controller: dateController,
-                  decoration: const InputDecoration(labelText: 'Date Of Dehorning'),
+                  decoration:
+                      const InputDecoration(labelText: 'Date Of Dehorning'),
                   keyboardType: TextInputType.datetime,
                   onTap: _selectDate,
                   readOnly: true,
@@ -466,7 +541,8 @@ class _DehorningPageState extends State<DehorningPage> {
                 SizedBox(height: 16),
                 TextField(
                   controller: costController,
-                  decoration: const InputDecoration(labelText: 'Cost of Dehorning'),
+                  decoration:
+                      const InputDecoration(labelText: 'Cost of Dehorning'),
                   keyboardType: TextInputType.number,
                 ),
                 SizedBox(height: 16),
@@ -496,8 +572,10 @@ class _DehorningPageState extends State<DehorningPage> {
                     }
                     Navigator.of(context).pop();
                   },
-                  child: const Text('Submit', style: TextStyle(color: Colors.white)),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+                  child: const Text('Submit',
+                      style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent),
                 ),
               ],
             ),

@@ -1,21 +1,27 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class DewormingPage extends StatefulWidget {
+  final Future<String?> adminEmailFuture;
+
+  DewormingPage({required this.adminEmailFuture});
+
   @override
   _DewormingPageState createState() => _DewormingPageState();
 }
 
 class _DewormingPageState extends State<DewormingPage> {
-  final _cattleIdController = TextEditingController();
+  //final _cattleIdController = TextEditingController();
   final _dateOfDewormingController = TextEditingController();
   final _vetNameController = TextEditingController();
   final _methodController = TextEditingController();
   final _diseaseController = TextEditingController();
   final _drugUsedController = TextEditingController();
   final _notesController = TextEditingController();
-  final _costController = TextEditingController(); // New cost controller
+  final _costController = TextEditingController();
+  final _cattleSerialNumberController = TextEditingController();
+  String? _selectedCattleName;
+  String? _adminEmail;
 
   late final CollectionReference _dewormingCollection;
   List<DocumentSnapshot> _dewormingList = [];
@@ -27,28 +33,44 @@ class _DewormingPageState extends State<DewormingPage> {
   @override
   void initState() {
     super.initState();
-    _initializeCollection();
-    _fetchDewormingRecords();
-    _fetchCattle(); // Fetch cattle data on initialization
+    // Removed the direct fetch of records here
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _fetchAdminEmail();
+  }
+
+  Future<void> _fetchAdminEmail() async {
+    final email = await widget.adminEmailFuture;
+    setState(() {
+      _adminEmail = email;
+    });
+
+    if (_adminEmail != null) {
+      _initializeCollection();
+      _fetchDewormingRecords();
+      _fetchCattle(); // Fetch cattle data after the admin email is set
+    } else {
+      // Move the SnackBar display here
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Admin email not set.')),
+      );
+    }
   }
 
   void _initializeCollection() {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('User not logged in.')),
-      );
-      return;
+    if (_adminEmail != null) {
+      _dewormingCollection = FirebaseFirestore.instance
+          .collection('deworming')
+          .doc(_adminEmail)
+          .collection('entries');
     }
-    _dewormingCollection = FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('deworming');
   }
 
   Future<void> _fetchDewormingRecords() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return;
+    if (_adminEmail == null) return;
 
     try {
       final snapshot = await _dewormingCollection.get();
@@ -63,17 +85,23 @@ class _DewormingPageState extends State<DewormingPage> {
   }
 
   Future<void> _fetchCattle() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return;
+    if (_adminEmail == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Admin email not set.')),
+      );
+      return;
+    }
 
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('cattle')
-          .where('userId',
-              isEqualTo: userId) 
+          .doc(_adminEmail) // Using adminEmail as the document ID
+          .collection('entries') // Accessing the 'entries' sub-collection
           .get();
+
       setState(() {
-        _cattleList = snapshot.docs;
+        _cattleList =
+            snapshot.docs; // Update the state with the fetched documents
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -89,7 +117,7 @@ class _DewormingPageState extends State<DewormingPage> {
     final disease = _diseaseController.text;
     final drugUsed = _drugUsedController.text;
     final notes = _notesController.text;
-    final cost = _costController.text; // New cost input
+    final cost = _costController.text;
 
     if (dateOfDeworming.isEmpty ||
         _selectedCattleId == null ||
@@ -98,17 +126,15 @@ class _DewormingPageState extends State<DewormingPage> {
         disease.isEmpty ||
         drugUsed.isEmpty ||
         cost.isEmpty) {
-      // Check for cost
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please fill in all required fields')),
       );
       return;
     }
 
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) {
+    if (_adminEmail == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('User not logged in.')),
+        SnackBar(content: Text('Admin email not set.')),
       );
       return;
     }
@@ -118,28 +144,30 @@ class _DewormingPageState extends State<DewormingPage> {
         // Add new record
         await _dewormingCollection.add({
           'date': dateOfDeworming,
-          'cattleId': _selectedCattleId, // Use selected cattle ID
-          'vetName': vetName,
+          'cattle_name': _selectedCattleName, // Save the name
+          'cattle_serial_number':
+              _cattleSerialNumberController.text, // Save serial number
+          'vet_name': vetName,
           'method': method,
           'disease': disease,
-          'drugUsed': drugUsed,
+          'drug_used': drugUsed,
           'notes': notes,
-          'cost': cost, // Save cost
+          'cost': double.tryParse(cost) ?? 0.0, // Save cost as double
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Data saved successfully')),
-        );
+        // ...
       } else {
         // Update existing record
         await _dewormingCollection.doc(_editingDocId).update({
           'date': dateOfDeworming,
-          'cattleId': _selectedCattleId,
-          'vetName': vetName,
+          'cattle_name': _selectedCattleName, // Update the name
+          'cattle_serial_number':
+              _cattleSerialNumberController.text, // Update serial number
+          'vet_name': vetName,
           'method': method,
           'disease': disease,
-          'drugUsed': drugUsed,
+          'drug_used': drugUsed,
           'notes': notes,
-          'cost': cost, // Update cost
+          'cost': double.tryParse(cost) ?? 0.0, // Update cost as double
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Data updated successfully')),
@@ -162,34 +190,34 @@ class _DewormingPageState extends State<DewormingPage> {
   }
 
   void _clearForm() {
-    _selectedCattleId = null; // Clear selected cattle ID
+    _selectedCattleId = null;
     _dateOfDewormingController.clear();
     _vetNameController.clear();
     _methodController.clear();
     _diseaseController.clear();
     _drugUsedController.clear();
     _notesController.clear();
-    _costController.clear(); // Clear cost field
+    _costController.clear();
   }
 
   void _editRecord(DocumentSnapshot doc) {
     setState(() {
       _editingDocId = doc.id;
-      _selectedCattleId = doc['cattleId']; // Set selected cattle ID
+      _selectedCattleId = doc['cattle_id']; // Match the field names
       _dateOfDewormingController.text = doc['date'];
-      _vetNameController.text = doc['vetName'];
+      _vetNameController.text = doc['vet_name'];
       _methodController.text = doc['method'];
       _diseaseController.text = doc['disease'];
-      _drugUsedController.text = doc['drugUsed'];
+      _drugUsedController.text = doc['drug_used'];
       _notesController.text = doc['notes'];
-      _costController.text = doc['cost'].toString(); // Set cost for editing
+      _costController.text =
+          doc['cost']?.toString() ?? ''; // Ensure correct type
       _isFormVisible = true;
     });
   }
 
   void _deleteRecord(String docId) async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return;
+    if (_adminEmail == null) return;
 
     try {
       await _dewormingCollection.doc(docId).delete();
@@ -307,7 +335,12 @@ class _DewormingPageState extends State<DewormingPage> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16.0),
-            _buildCattleDropdown(), // Dropdown for cattle selection
+            _buildCattleDropdown(),
+            _buildFormField(
+              controller:
+                  _cattleSerialNumberController, // New serial number field
+              labelText: 'Cattle Serial Number',
+            ), // Dropdown for cattle selection
             _buildFormField(
               controller: _dateOfDewormingController,
               labelText: 'Date Of Deworming',
@@ -317,7 +350,7 @@ class _DewormingPageState extends State<DewormingPage> {
                   context: context,
                   initialDate: DateTime.now(),
                   firstDate: DateTime(2000),
-                  lastDate: DateTime(2101),
+                  lastDate: DateTime.now(),
                 );
                 if (pickedDate != null) {
                   String formattedDate =
@@ -355,6 +388,7 @@ class _DewormingPageState extends State<DewormingPage> {
               labelText: 'Cost of Deworming', // New cost field
               inputType: TextInputType.number,
             ),
+
             _buildFormField(
               controller: _notesController,
               labelText: 'Notes',
@@ -380,10 +414,13 @@ class _DewormingPageState extends State<DewormingPage> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: DropdownButtonFormField<String>(
-        value: _selectedCattleId,
+        value: _selectedCattleName, // Use name instead of ID
         onChanged: (String? newValue) {
           setState(() {
-            _selectedCattleId = newValue; // Set selected cattle ID
+            _selectedCattleName = newValue; // Set selected cattle name
+            // Set the cattle ID as well based on name (if needed)
+            _selectedCattleId =
+                _cattleList.firstWhere((doc) => doc['name'] == newValue).id;
           });
         },
         decoration: InputDecoration(
@@ -393,7 +430,7 @@ class _DewormingPageState extends State<DewormingPage> {
         ),
         items: _cattleList.map((doc) {
           return DropdownMenuItem<String>(
-            value: doc.id, // Use document ID as value
+            value: doc['name'], // Save the name instead of ID
             child: Text(doc['name']), // Display cattle name
           );
         }).toList(),
@@ -453,83 +490,83 @@ class _DewormingPageState extends State<DewormingPage> {
     );
   }
 
-  Widget _buildDewormingList() {
-    return Card(
-      elevation: 6.0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Deworming List',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16.0),
-            _dewormingList.isNotEmpty
-                ? Column(
-                    children: _dewormingList.map((doc) {
-                      final date = doc['date'] ?? '';
-                      final cattleId = doc['cattleId'] ?? '';
-                      final vetName = doc['vetName'] ?? '';
-                      final method = doc['method'] ?? '';
-                      final disease = doc['disease'] ?? '';
-                      final drugUsed = doc['drugUsed'] ?? '';
-                      final notes = doc['notes'] ?? '';
-                      final cost = (doc.data() as Map<String, dynamic>)
-                              .containsKey('cost')
-                          ? doc['cost']
-                          : 'N/A'; // Check for existence
+Widget _buildDewormingList() {
+  return Card(
+    elevation: 6.0,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Deworming List',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16.0),
+          _dewormingList.isNotEmpty
+              ? Column(
+                  children: _dewormingList.map((doc) {
+                    final cattleName = doc['cattle_name'] ?? '';
+                    final cattleSerialNumber = doc['cattle_serial_number'] ?? '';
+                    final date = doc['date'] ?? '';
+                    final vetName = doc['vet_name'] ?? '';
+                    final method = doc['method'] ?? '';
+                    final disease = doc['disease'] ?? '';
+                    final drugUsed = doc['drug_used'] ?? '';
+                    final notes = doc['notes'] ?? '';
+                    final cost = (doc.data() as Map<String, dynamic>).containsKey('cost')
+                        ? doc['cost']
+                        : 'N/A';
 
-                      return Card(
-                        elevation: 4.0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    return Card(
+                      elevation: 4.0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      margin: const EdgeInsets.only(bottom: 8.0),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Date: $date', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text('Cattle Name: $cattleName'),
+                            Text('Cattle Serial Number: $cattleSerialNumber'),
+                            Text('Veterinary Doctor: $vetName'),
+                            Text('Method: $method'),
+                            Text('Disease: $disease'),
+                            Text('Drug Used: $drugUsed'),
+                            Text('Cost: \$${cost.toString()}', style: TextStyle(color: Colors.green)),
+                            Text('Notes: $notes'),
+                            Spacer(), // This pushes the actions to the bottom
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                IconButton(
+                                  icon: Icon(Icons.edit, color: Colors.blue),
+                                  onPressed: () => _editRecord(doc),
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () => _deleteRecord(doc.id),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                        margin: const EdgeInsets.only(bottom: 8.0),
-                        child: ListTile(
-                          contentPadding: EdgeInsets.all(16.0),
-                          title: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Date: $date',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
-                              Text('Cattle ID: $cattleId'),
-                              Text('Veterinary Doctor: $vetName'),
-                              Text('Method: $method'),
-                              Text('Disease: $disease'),
-                              Text('Drug Used: $drugUsed'),
-                              Text('Cost: \$${cost.toString()}',
-                                  style: TextStyle(
-                                      color: Colors.green)), // Display cost
-                              Text('Notes: $notes'),
-                            ],
-                          ),
-                          trailing: Wrap(
-                            spacing: 12,
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.edit, color: Colors.blue),
-                                onPressed: () => _editRecord(doc),
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _deleteRecord(doc.id),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  )
-                : Text('No deworming records found.'),
-          ],
-        ),
+                      ),
+                    );
+                  }).toList(),
+                )
+              : Text('No Deworming records found.'),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
+
+
 }
