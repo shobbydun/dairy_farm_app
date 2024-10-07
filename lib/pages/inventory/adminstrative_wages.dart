@@ -1,10 +1,13 @@
 import 'package:dairy_harbor/components/inventory_components/add_wage_page.dart';
 import 'package:dairy_harbor/components/inventory_components/edit_wage_page.dart';
+import 'package:dairy_harbor/main.dart';
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class AdministrativeWages extends StatefulWidget {
+  final Future<String?> adminEmailFuture;
+  AdministrativeWages({super.key, required this.adminEmailFuture});
   @override
   _AdministrativeWagesState createState() => _AdministrativeWagesState();
 }
@@ -15,14 +18,25 @@ class _AdministrativeWagesState extends State<AdministrativeWages> {
   List<Map<String, dynamic>> _filteredWages = [];
   String _selectedFilter = '';
   final TextEditingController _searchController = TextEditingController();
+  String? _adminEmail;
 
   @override
   void initState() {
     super.initState();
     final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-    _firestoreServices = FirestoreServices(userId);
+    final adminEmailFuture =
+        getAdminEmailFromFirestore(); // Update to get admin email if necessary
+    _firestoreServices = FirestoreServices(userId, adminEmailFuture);
     _loadWages();
+    _fetchAdminEmail();
     _searchController.addListener(_filterWages);
+  }
+
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    print('Admin Email: $_adminEmail');
+    _loadWages();
+    setState(() {});
   }
 
   Future<void> _loadWages() async {
@@ -45,7 +59,8 @@ class _AdministrativeWagesState extends State<AdministrativeWages> {
     _loadWages();
   }
 
-  Future<void> _editWage(String docId, String employeeName, String department, String date, String wage) async {
+  Future<void> _editWage(String docId, String employeeName, String department,
+      String date, String wage) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -89,11 +104,15 @@ class _AdministrativeWagesState extends State<AdministrativeWages> {
         } else if (_selectedFilter == 'Department') {
           return department.contains(query);
         } else {
-          return name.contains(query) || department.contains(query) || date.contains(query) || wageStr.contains(query);
+          return name.contains(query) ||
+              department.contains(query) ||
+              date.contains(query) ||
+              wageStr.contains(query);
         }
       }).toList();
     });
   }
+
 
   void _applyFilter(String? value) {
     setState(() {
@@ -176,19 +195,23 @@ class _AdministrativeWagesState extends State<AdministrativeWages> {
                     ),
                     child: DropdownButton<String>(
                       hint: Text('Select filter'),
-                      value: _selectedFilter.isNotEmpty ? _selectedFilter : null,
+                      value:
+                          _selectedFilter.isNotEmpty ? _selectedFilter : null,
                       items: [
                         DropdownMenuItem(
                           value: 'Date',
-                          child: Text('Date', style: TextStyle(color: Colors.black)),
+                          child: Text('Date',
+                              style: TextStyle(color: Colors.black)),
                         ),
                         DropdownMenuItem(
                           value: 'Employee',
-                          child: Text('Employee', style: TextStyle(color: Colors.black)),
+                          child: Text('Employee',
+                              style: TextStyle(color: Colors.black)),
                         ),
                         DropdownMenuItem(
                           value: 'Department',
-                          child: Text('Department', style: TextStyle(color: Colors.black)),
+                          child: Text('Department',
+                              style: TextStyle(color: Colors.black)),
                         ),
                       ],
                       onChanged: _applyFilter,
@@ -222,29 +245,29 @@ class _AdministrativeWagesState extends State<AdministrativeWages> {
                     columns: const [
                       DataColumn(
                           label: Text(
-                            'Employee Name',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          )),
+                        'Employee Name',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      )),
                       DataColumn(
                           label: Text(
-                            'Department',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          )),
+                        'Department',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      )),
                       DataColumn(
                           label: Text(
-                            'Date',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          )),
+                        'Date',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      )),
                       DataColumn(
                           label: Text(
-                            'Wage',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          )),
+                        'Wage',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      )),
                       DataColumn(
                           label: Text(
-                            'Actions',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          )),
+                        'Actions',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      )),
                     ],
                     rows: _filteredWages.map((wage) {
                       return DataRow(
@@ -258,7 +281,8 @@ class _AdministrativeWagesState extends State<AdministrativeWages> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon: Icon(Icons.edit, color: Colors.blueAccent),
+                                  icon: Icon(Icons.edit,
+                                      color: Colors.blueAccent),
                                   onPressed: () {
                                     _editWage(
                                       wage['id'] ?? '',
@@ -270,7 +294,8 @@ class _AdministrativeWagesState extends State<AdministrativeWages> {
                                   },
                                 ),
                                 IconButton(
-                                  icon: Icon(Icons.delete, color: Colors.redAccent),
+                                  icon: Icon(Icons.delete,
+                                      color: Colors.redAccent),
                                   onPressed: () {
                                     showDeleteWageDialog(context, () {
                                       _deleteWage(wage['id'] ?? '');
@@ -297,7 +322,8 @@ class _AdministrativeWagesState extends State<AdministrativeWages> {
   String _calculateTotalWages() {
     double total = 0.0;
     for (var wage in _filteredWages) {
-      final wageString = (wage['wage'] ?? '').replaceAll('Kshs ', '').replaceAll(',', '');
+      final wageString =
+          (wage['wage'] ?? '').replaceAll('Kshs ', '').replaceAll(',', '');
       final wageValue = double.tryParse(wageString) ?? 0.0;
       total += wageValue;
     }

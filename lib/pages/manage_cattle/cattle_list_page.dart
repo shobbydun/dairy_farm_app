@@ -27,9 +27,32 @@ class _CattleListState extends State<CattleList> {
     });
   }
 
-  Future<void> _fetchAdminEmail() async {
+   Future<void> _fetchAdminEmail() async {
     _adminEmail = await widget.adminEmailFuture;
+    if (_adminEmail != null) {
+      // Fetch counts after getting the admin email
+      await _fetchCounts(); // Add this line to fetch counts
+    }
     setState(() {});
+  }
+
+  Future<void> _fetchCounts() async {
+    if (_adminEmail == null) {
+      return; // Early exit if adminEmail is null
+    }
+
+    try {
+      final cattleSnapshot = await FirebaseFirestore.instance
+          .collection('cattle')
+          .doc(_adminEmail)
+          .collection('entries')
+          .get();
+
+      print('Cattle entries fetched: ${cattleSnapshot.docs.length}');
+      // Handle the fetched data as needed
+    } catch (e) {
+      print('Error fetching cattle counts: $e');
+    }
   }
 
   @override

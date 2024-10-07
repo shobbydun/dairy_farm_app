@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class PestControlPage extends StatefulWidget {
+  final Future<String?> adminEmailFuture;
+
+  PestControlPage({required this.adminEmailFuture});
   @override
   _PestControlPageState createState() => _PestControlPageState();
 }
@@ -15,31 +17,52 @@ class _PestControlPageState extends State<PestControlPage> {
   final _costController = TextEditingController();
   String? _editingDocId;
   bool _isFormVisible = false;
-  late CollectionReference _pestControlCollection;
+  CollectionReference? _pestControlCollection;
+  String? _adminEmail;
 
   @override
   void initState() {
     super.initState();
-    _initializeCollection();
+    _fetchAdminEmail();
   }
 
-  Future<void> _initializeCollection() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      setState(() {
-        _pestControlCollection = FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('pest_control_records');
-      });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+  }
+
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    print("Admin Email: $_adminEmail"); // Debug print
+    if (_adminEmail != null) {
+      _initializeCollection(); // Initialize the collection
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('User not logged in')),
+        SnackBar(content: Text('Admin email not set')),
       );
     }
   }
 
+  void _initializeCollection() {
+    if (_adminEmail != null) {
+      setState(() {
+        _pestControlCollection = FirebaseFirestore.instance
+            .collection('pest_control_records')
+            .doc(_adminEmail)
+            .collection('entries');
+      });
+      print('Initialized Collection for Admin: $_adminEmail');
+    }
+  }
+
   Future<void> _submitRecord() async {
+    if (_pestControlCollection == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Collection not initialized')),
+      );
+      return;
+    }
+
     final pestType = _pestTypeController.text;
     final treatment = _treatmentController.text;
     final status = _statusController.text;
@@ -48,7 +71,7 @@ class _PestControlPageState extends State<PestControlPage> {
     if (pestType.isNotEmpty && treatment.isNotEmpty && status.isNotEmpty) {
       try {
         if (_editingDocId == null) {
-          await _pestControlCollection.add({
+          await _pestControlCollection!.add({
             'pest_type': pestType,
             'treatment': treatment,
             'status': status,
@@ -59,9 +82,7 @@ class _PestControlPageState extends State<PestControlPage> {
             SnackBar(content: Text('Pest Control Record Saved')),
           );
         } else {
-          await _pestControlCollection
-              .doc(_editingDocId)
-              .update({
+          await _pestControlCollection!.doc(_editingDocId).update({
             'pest_type': pestType,
             'treatment': treatment,
             'status': status,
@@ -91,6 +112,13 @@ class _PestControlPageState extends State<PestControlPage> {
   }
 
   Future<void> _confirmDelete(String docId) async {
+    if (_pestControlCollection == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Collection not initialized')),
+      );
+      return;
+    }
+
     final result = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -110,7 +138,7 @@ class _PestControlPageState extends State<PestControlPage> {
     );
     if (result == true) {
       try {
-        await _pestControlCollection.doc(docId).delete();
+        await _pestControlCollection!.doc(docId).delete();
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to delete record: $e')),
@@ -163,7 +191,7 @@ class _PestControlPageState extends State<PestControlPage> {
 
   Widget _buildDashboard() {
     return StreamBuilder<QuerySnapshot>(
-      stream: _pestControlCollection.snapshots(),
+      stream: _pestControlCollection?.snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
@@ -277,7 +305,7 @@ class _PestControlPageState extends State<PestControlPage> {
 
   Widget _buildCharts() {
     return StreamBuilder<QuerySnapshot>(
-      stream: _pestControlCollection.snapshots(),
+      stream: _pestControlCollection?.snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
@@ -426,7 +454,7 @@ class _PestControlPageState extends State<PestControlPage> {
 
   Widget _buildPestControlRecordsList() {
     return StreamBuilder<QuerySnapshot>(
-      stream: _pestControlCollection.snapshots(),
+      stream: _pestControlCollection?.snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());

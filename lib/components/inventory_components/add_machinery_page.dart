@@ -1,3 +1,4 @@
+import 'package:dairy_harbor/main.dart';
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -25,8 +26,14 @@ class _AddMachineryPageState extends State<AddMachineryPage> {
   @override
   void initState() {
     super.initState();
+    _initializeFirestoreServices();
+  }
+
+  Future<void> _initializeFirestoreServices() async {
     final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-    _firestoreServices = FirestoreServices(userId);
+    final adminEmailFuture = getAdminEmailFromFirestore(); // Fetch admin email future
+    _firestoreServices = FirestoreServices(userId, adminEmailFuture);
+    setState(() {}); // Call setState if you want to rebuild the UI
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -34,7 +41,7 @@ class _AddMachineryPageState extends State<AddMachineryPage> {
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
+      lastDate: DateTime.now(),
     );
 
     if (selectedDate != null) {
@@ -72,14 +79,15 @@ class _AddMachineryPageState extends State<AddMachineryPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Add Machinery'),
-        backgroundColor: Colors.blueAccent,
-      ),
-      body: Padding(
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: Text('Add Machinery'),
+      backgroundColor: Colors.blueAccent,
+    ),
+    body: SingleChildScrollView(  // Added SingleChildScrollView here
+      child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
@@ -176,8 +184,9 @@ class _AddMachineryPageState extends State<AddMachineryPage> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildTextField({
     required TextEditingController controller,

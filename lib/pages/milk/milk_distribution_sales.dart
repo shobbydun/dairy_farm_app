@@ -32,6 +32,7 @@ class _MilkDistributionSalesState extends State<MilkDistributionSales> {
   @override
   void initState() {
     super.initState();
+    selectedPeriod = 'weekly';
     _setDefaultDateRange();
     _fetchAdminEmail();
   }
@@ -58,74 +59,81 @@ class _MilkDistributionSalesState extends State<MilkDistributionSales> {
     }
   }
 
- Future<void> _fetchData() async {
-  User? user = FirebaseAuth.instance.currentUser;
-  if (user != null &&
-      _startDate != null &&
-      _endDate != null &&
-      _adminEmail != null) {
-    try {
-      QuerySnapshot entriesSnapshot = await FirebaseFirestore.instance
-          .collection('milk_production')
-          .doc(_adminEmail)
-          .collection('entries')
-          .get();
+  Future<void> _fetchData() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null &&
+        _startDate != null &&
+        _endDate != null &&
+        _adminEmail != null) {
+      try {
+        QuerySnapshot entriesSnapshot = await FirebaseFirestore.instance
+            .collection('milk_production')
+            .doc(_adminEmail)
+            .collection('entries')
+            .get();
 
+        double sales = 0.0;
+        double milkDistributed = 0.0;
+        List<FlSpot> spots = [];
 
-      double sales = 0.0;
-      double milkDistributed = 0.0;
-      List<FlSpot> spots = [];
+        if (entriesSnapshot.docs.isEmpty) {
+          print('No entries found for the selected date range.');
+        } else {
+          print('Fetched ${entriesSnapshot.docs.length} entries.');
 
-      if (entriesSnapshot.docs.isEmpty) {
-        print('No entries found for the selected date range.');
-      } else {
-        print('Fetched ${entriesSnapshot.docs.length} entries.');
+          for (var doc in entriesSnapshot.docs) {
+            var data = doc.data() as Map<String, dynamic>;
+            DateTime date = (data['date'] as Timestamp).toDate();
 
-        for (var doc in entriesSnapshot.docs) {
-          var data = doc.data() as Map<String, dynamic>;
-          DateTime date = (data['date'] as Timestamp).toDate();
+            // Ensure that the entry falls within the selected date range
+            if (date.isAfter(_startDate!) &&
+                date.isBefore(_endDate!.add(Duration(days: 1)))) {
+              double milkInLitres =
+                  double.tryParse(data['final_in_litres'].toString()) ?? 0;
+              double pricePerLitre =
+                  double.tryParse(data['price_per_litre'].toString()) ?? 0;
 
-          // Ensure that the entry falls within the selected date range
-          if (date.isAfter(_startDate!) && date.isBefore(_endDate!.add(Duration(days: 1)))) {
-            double milkInLitres = double.tryParse(data['final_in_litres'].toString()) ?? 0;
-            double pricePerLitre = double.tryParse(data['price_per_litre'].toString()) ?? 0;
+              sales += milkInLitres * pricePerLitre;
+              milkDistributed += milkInLitres;
 
-            sales += milkInLitres * pricePerLitre;
-            milkDistributed += milkInLitres;
+              print(
+                  'Current Sales Entry: $milkInLitres * $pricePerLitre = ${milkInLitres * pricePerLitre}');
 
-            print('Current Sales Entry: $milkInLitres * $pricePerLitre = ${milkInLitres * pricePerLitre}');
-
-            if (selectedPeriod == 'weekly') {
-              int dayOfWeek = date.weekday;
-              spots.add(FlSpot(dayOfWeek.toDouble(), milkInLitres * pricePerLitre));
-            } else if (selectedPeriod == 'monthly') {
-              int month = date.month;
-              spots.add(FlSpot(month.toDouble(), milkInLitres * pricePerLitre));
+              if (selectedPeriod == 'weekly') {
+                int dayOfWeek = date.weekday;
+                spots.add(
+                    FlSpot(dayOfWeek.toDouble(), milkInLitres * pricePerLitre));
+              } else if (selectedPeriod == 'monthly') {
+                int month = date.month;
+                spots.add(
+                    FlSpot(month.toDouble(), milkInLitres * pricePerLitre));
+              }
             }
           }
+
+          // Sort the spots by x value after collecting all data points
+          spots.sort((a, b) => a.x.compareTo(b.x));
         }
-      }
 
-      if (mounted) {
-        setState(() {
-          totalSales = sales;
-          totalMilkDistributed = milkDistributed;
-          chartData = spots.isNotEmpty ? spots : [FlSpot(0, 0)];
-        });
-      }
+        if (mounted) {
+          setState(() {
+            totalSales = sales;
+            totalMilkDistributed = milkDistributed;
+            chartData = spots.isNotEmpty ? spots : [FlSpot(0, 0)];
+          });
+        }
 
-      print('Total Sales: $totalSales');
-      print('Total Milk Distributed: $totalMilkDistributed');
-      print('Chart Data: $chartData');
-    } catch (e) {
-      print('Error fetching data: $e');
+        print('Total Sales: $totalSales');
+        print('Total Milk Distributed: $totalMilkDistributed');
+        print('Chart Data: $chartData');
+      } catch (e) {
+        print('Error fetching data: $e');
+      }
+    } else {
+      print(
+          'User is not authenticated or dates are not set or admin email is null.');
     }
-  } else {
-    print('User is not authenticated or dates are not set or admin email is null.');
   }
-}
-
-
 
   void _showDateRangePicker(BuildContext context) async {
     showDateRangePicker(
@@ -226,8 +234,8 @@ class _MilkDistributionSalesState extends State<MilkDistributionSales> {
     setState(() {
       selectedPeriod = value!;
       _setDefaultDateRange(); // Reset the date range based on the selected period
-      _fetchData(); // Re-fetch data based on the new selection
     });
+    _fetchData(); // Re-fetch data based on the new selection
   }
 
   @override
@@ -345,43 +353,34 @@ class _MilkDistributionSalesState extends State<MilkDistributionSales> {
                               showTitles: true,
                               reservedSize: 30,
                               getTitlesWidget: (value, meta) {
+                                // Adjust according to your data
                                 if (selectedPeriod == 'weekly') {
-                                  int index = value.toInt();
-                                  if (index >= 1 && index <= 7) {
-                                    return Text(
-                                      [
-                                        'Mon',
-                                        'Tue',
-                                        'Wed',
-                                        'Thu',
-                                        'Fri',
-                                        'Sat',
-                                        'Sun'
-                                      ][index - 1],
-                                    );
-                                  }
+                                  return Text([
+                                    'Mon',
+                                    'Tue',
+                                    'Wed',
+                                    'Thu',
+                                    'Fri',
+                                    'Sat',
+                                    'Sun'
+                                  ][value.toInt() - 1]);
                                 } else if (selectedPeriod == 'monthly') {
-                                  int index = value.toInt();
-                                  if (index >= 1 && index <= 12) {
-                                    return Text(
-                                      [
-                                        'Jan',
-                                        'Feb',
-                                        'Mar',
-                                        'Apr',
-                                        'May',
-                                        'Jun',
-                                        'Jul',
-                                        'Aug',
-                                        'Sep',
-                                        'Oct',
-                                        'Nov',
-                                        'Dec'
-                                      ][index - 1],
-                                    );
-                                  }
+                                  return Text([
+                                    'Jan',
+                                    'Feb',
+                                    'Mar',
+                                    'Apr',
+                                    'May',
+                                    'Jun',
+                                    'Jul',
+                                    'Aug',
+                                    'Sep',
+                                    'Oct',
+                                    'Nov',
+                                    'Dec'
+                                  ][value.toInt() - 1]);
                                 }
-                                return const Text(''); // Empty if out of range
+                                return const Text('');
                               },
                             ),
                           ),
@@ -407,14 +406,8 @@ class _MilkDistributionSalesState extends State<MilkDistributionSales> {
                             belowBarData: BarAreaData(show: false),
                           ),
                         ],
-                        minX: selectedPeriod == 'weekly'
-                            ? 1
-                            : 1, // Ensure correct min X value
-                        maxX: selectedPeriod == 'weekly'
-                            ? 7
-                            : 12, // Ensure correct max X value
-                        minY:
-                            0, // Set minimum Y value to avoid going below zero
+                        minX: 1,
+                        maxX: selectedPeriod == 'weekly' ? 7 : 12,
                       ),
                     ),
                   ),

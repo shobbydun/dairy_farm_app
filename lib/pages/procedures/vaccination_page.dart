@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class VaccinationPage extends StatefulWidget {
+  final Future<String?> adminEmailFuture;
+  VaccinationPage({required this.adminEmailFuture});
   @override
   _VaccinationPageState createState() => _VaccinationPageState();
 }
@@ -14,24 +15,28 @@ class _VaccinationPageState extends State<VaccinationPage> {
   final TextEditingController _costController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
 
-  late CollectionReference _vaccinationCollection;
+  CollectionReference? _vaccinationCollection; // Change to nullable
+  String? _adminEmail;
 
   @override
   void initState() {
     super.initState();
-    _initializeCollection();
+    _fetchAdminEmail();
+  }
+
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    _initializeCollection(); // Initialize the collection after fetching the admin email
+    setState(() {}); // Refresh UI after initialization
   }
 
   void _initializeCollection() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
+    if (_adminEmail != null) {
       _vaccinationCollection = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('vaccinations');
-    } else {
-      // Handle case when user is not logged in
-      _vaccinationCollection = FirebaseFirestore.instance.collection('vaccinations');
+          .collection('vaccinations_records')
+          .doc(_adminEmail)
+          .collection('entries');
+      print('Initialized Vaccination Collection for Admin: $_adminEmail');
     }
   }
 
@@ -162,8 +167,11 @@ class _VaccinationPageState extends State<VaccinationPage> {
             ),
             const SizedBox(height: 16.0),
             StreamBuilder<QuerySnapshot>(
-              stream: _vaccinationCollection.snapshots(),
+              stream: _vaccinationCollection?.snapshots(),
               builder: (context, snapshot) {
+                if (_vaccinationCollection == null) {
+                  return Center(child: CircularProgressIndicator());
+                }
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(child: CircularProgressIndicator());
                 }
@@ -173,7 +181,6 @@ class _VaccinationPageState extends State<VaccinationPage> {
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return Center(child: Text('No Vaccination Records Found'));
                 }
-
                 return ListView.builder(
                   shrinkWrap: true,
                   physics: NeverScrollableScrollPhysics(),
@@ -185,7 +192,8 @@ class _VaccinationPageState extends State<VaccinationPage> {
                     return ListTile(
                       title: Text(data['vaccine_name'] ?? 'No Name'),
                       subtitle: Text(
-                          'Doctor: ${data['doctor_name'] ?? 'N/A'}\nDisease: ${data['disease'] ?? 'N/A'}'),
+                        'Doctor: ${data['doctor_name'] ?? 'N/A'}\nDisease: ${data['disease'] ?? 'N/A'}',
+                      ),
                       trailing: PopupMenuButton<String>(
                         onSelected: (value) async {
                           if (value == 'edit') {
@@ -195,7 +203,9 @@ class _VaccinationPageState extends State<VaccinationPage> {
                                 await _showConfirmationDialog(context);
                             if (shouldDelete) {
                               try {
-                                await _vaccinationCollection.doc(doc.id).delete();
+                                await _vaccinationCollection!
+                                    .doc(doc.id)
+                                    .delete();
                               } catch (e) {
                                 // Handle delete failure if needed
                                 Future.microtask(() {
@@ -273,7 +283,7 @@ class _VaccinationPageState extends State<VaccinationPage> {
             ElevatedButton(
               onPressed: () async {
                 try {
-                  await _vaccinationCollection.doc(docId).update({
+                  await _vaccinationCollection!.doc(docId).update({
                     'doctor_name': _doctorNameController.text.trim(),
                     'vaccine_name': _vaccineNameController.text.trim(),
                     'disease': _diseaseController.text.trim(),
@@ -323,7 +333,7 @@ class _VaccinationPageState extends State<VaccinationPage> {
 
     if (doctorName.isNotEmpty && vaccineName.isNotEmpty && disease.isNotEmpty) {
       try {
-        await _vaccinationCollection.add({
+        await _vaccinationCollection!.add({
           'doctor_name': doctorName,
           'vaccine_name': vaccineName,
           'disease': disease,

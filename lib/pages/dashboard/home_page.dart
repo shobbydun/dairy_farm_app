@@ -3,14 +3,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dairy_harbor/components/widgets/my_app_bar.dart';
 import 'package:dairy_harbor/components/widgets/my_card.dart';
 import 'package:dairy_harbor/components/widgets/side_bar.dart';
-import 'package:dairy_harbor/pages/inventory/feeds_page.dart';
-import 'package:dairy_harbor/pages/reports/reports_page.dart';
-import 'package:dairy_harbor/pages/workers/worker_list_page.dart';
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 class HomePage extends StatefulWidget {
@@ -51,6 +47,54 @@ class _HomePageState extends State<HomePage> {
   List<FlSpot> chartData = [];
   List<double> dailyExpenses = List<double>.filled(7, 0.0);
   double chartMaxY = 0.0;
+  double _monthlyRevenue = 0.0;
+  double _cowSales = 0.0;
+  double _feedCost = 0.0;
+  double _salaryCost = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeData();
+  }
+
+  void _initializeData() async {
+    if (widget.user != null && widget.userId.isNotEmpty) {
+      await _fetchFarmName(); // Fetch farm name first
+      await _fetchAdminEmail(); // Then fetch admin email
+    } else {
+      print("No user is currently logged in or user ID is empty.");
+      setState(() {
+        isLoading = false; // Update loading state
+      });
+    }
+  }
+
+  Future<void> _fetchAdminEmail() async {
+    try {
+      // Fetch admin email
+      _adminEmail = await widget.adminEmailFuture;
+      print('Admin Email: $_adminEmail');
+
+      // Only proceed if admin email is successfully fetched
+      if (_adminEmail != null) {
+        await _fetchCounts();
+        await _fetchData();
+        await _fetchWeeklyExpenses();
+        await _fetchSummaryData();
+      } else {
+        print('Admin email is null, skipping data fetches.');
+      }
+    } catch (e) {
+      print('Error fetching admin email: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false; // Ensure loading state is updated
+        });
+      }
+    }
+  }
 
   Future<void> _fetchFarmName() async {
     try {
@@ -63,73 +107,228 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _fetchAdminEmail() async {
-    _adminEmail = await widget.adminEmailFuture;
-    if (_adminEmail != null) {
-      await _fetchData(); // Fetch data after getting the admin email
-    }
-    if (mounted) {
-      setState(() {});
+  Future<void> _fetchSummaryData() async {
+    try {
+      _monthlyRevenue = await getMonthlyRevenue();
+      _feedCost = await getMonthlyExpenses(); // Adjust to only get feed cost
+
+      // Fetch wages separately and sum them up
+      List<Map<String, dynamic>> wages = await getWages();
+      _salaryCost = wages.fold(
+          0.0,
+          (sum, wage) =>
+              sum + (double.tryParse(wage['wage']?.toString() ?? '0') ?? 0.0));
+
+      _cowSales = await getMonthlyCowSales(); // Fetch cow sales
+
+      if (mounted) {
+        setState(() {
+          // Update any relevant UI elements
+        });
+      }
+
+      print('Monthly Revenue: $_monthlyRevenue');
+      print('Feed Cost: $_feedCost');
+      print('Salary Cost: $_salaryCost');
+      print('Cow Sales: $_cowSales');
+    } catch (e) {
+      print('Error fetching summary data: $e');
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    //_loadData();
-    if (widget.user != null && widget.userId.isNotEmpty) {
-      _fetchFarmName();
-    } else {
-      print("No user is currently logged in or user ID is empty.");
+  Future<double> getMonthlyCowSales() async {
+    if (_adminEmail != null) {
+      try {
+        // Fetch cow sales data
+        QuerySnapshot snapshot = await FirebaseFirestore.instance
+            .collection('cow_sales')
+            .doc(_adminEmail)
+            .collection('entries')
+            .where('date',
+                isGreaterThanOrEqualTo:
+                    DateTime(DateTime.now().year, DateTime.now().month, 1))
+            .get();
+
+        double totalCowSales = 0.0;
+
+        for (var doc in snapshot.docs) {
+          var data = doc.data() as Map<String, dynamic>?; // Safe cast to Map
+          if (data != null) {
+            totalCowSales += data['amount'] ?? 0.0; // Safely access 'amount'
+          }
+        }
+
+        return totalCowSales;
+      } catch (e) {
+        print('Error fetching monthly cow sales: $e');
+        return 0.0;
+      }
     }
-    _fetchCounts();
-    _fetchData();
-    _fetchWeeklyExpenses();
-    _fetchAdminEmail();
+    return 0.0;
+  }
+
+  Future<double> getMonthlyRevenue() async {
+    if (_adminEmail != null) {
+      try {
+        List<Map<String, dynamic>> milkEntries = await _fetchMilkEntries();
+        double totalRevenue = 0.0;
+
+        for (var entry in milkEntries) {
+          double finalMilkInLitres = entry['final_in_litres'] ?? 0.0;
+          double pricePerLitre = entry['price_per_litre'] ?? 0.0;
+          totalRevenue += finalMilkInLitres * pricePerLitre;
+        }
+
+        return totalRevenue;
+      } catch (e) {
+        print('Error fetching monthly revenue: $e');
+        return 0.0;
+      }
+    }
+    return 0.0;
+  }
+
+  Future<double> getMonthlyExpenses() async {
+    double totalFeedCost = 0.0;
+    double totalWages = 0.0;
+
+    try {
+      List<Map<String, dynamic>> feeds = await getFeeds();
+      for (var feed in feeds) {
+        totalFeedCost +=
+            feed['cost'] ?? 0.0; // Ensure 'cost' is accessed safely
+      }
+
+      List<Map<String, dynamic>> wages = await getWages();
+      for (var wage in wages) {
+        // Check if wage is not null
+        totalWages += double.tryParse(wage['wage']?.toString() ?? '0') ??
+            0.0; // Safe access
+      }
+    } catch (e) {
+      print('Error fetching monthly expenses: $e');
+    }
+
+    return totalFeedCost + totalWages;
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchMilkEntries() async {
+    if (_adminEmail != null) {
+      try {
+        QuerySnapshot snapshot = await FirebaseFirestore.instance
+            .collection('milk_production')
+            .doc(_adminEmail)
+            .collection('entries')
+            .where('date',
+                isGreaterThanOrEqualTo:
+                    DateTime(DateTime.now().year, DateTime.now().month, 1))
+            .get();
+
+        return snapshot.docs.map((doc) {
+          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+          return {
+            'final_in_litres': data['final_in_litres'] ?? 0.0,
+            'price_per_litre': data['price_per_litre'] ?? 0.0,
+          };
+        }).toList();
+      } catch (e) {
+        print('Error fetching milk entries: $e');
+        return [];
+      }
+    }
+    return [];
+  }
+
+  Future<List<Map<String, dynamic>>> getFeeds() async {
+    if (_adminEmail != null) {
+      try {
+        final querySnapshot = await FirebaseFirestore.instance
+            .collection('feeds')
+            .doc(_adminEmail)
+            .collection('entries')
+            .get();
+
+        return querySnapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+
+          // If date is a String, convert it to Timestamp
+          if (data['date'] is String) {
+            data['date'] = Timestamp.fromDate(DateTime.parse(data['date']));
+          }
+
+          // Convert Timestamp to String for display
+          if (data['date'] is Timestamp) {
+            data['date'] = (data['date'] as Timestamp)
+                .toDate()
+                .toIso8601String()
+                .split('T')[0]; // Format to 'yyyy-MM-dd'
+          }
+
+          return {'id': doc.id, ...data};
+        }).toList();
+      } catch (e) {
+        print('Error fetching feeds: $e');
+        rethrow;
+      }
+    }
+    return [];
+  }
+
+  Future<List<Map<String, dynamic>>> getWages() async {
+    if (_adminEmail != null) {
+      try {
+        final querySnapshot = await FirebaseFirestore.instance
+            .collection('wages')
+            .doc(_adminEmail)
+            .collection('entries')
+            .get();
+
+        return querySnapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return {'id': doc.id, ...data};
+        }).toList();
+      } catch (e) {
+        print('Error fetching wages: $e');
+        return [];
+      }
+    }
+    return [];
   }
 
   Future<void> _fetchData() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null && _adminEmail != null) {
       try {
+        print('Fetching data for admin email: $_adminEmail');
         QuerySnapshot entriesSnapshot = await FirebaseFirestore.instance
             .collection('milk_production')
             .doc(_adminEmail)
             .collection('entries')
             .get();
 
+        print('Fetched ${entriesSnapshot.docs.length} entries.');
+
         double sales = 0.0;
         double milkDistributed = 0.0;
         List<FlSpot> spots = [];
 
-        if (entriesSnapshot.docs.isEmpty) {
-          print('No entries found.');
-        } else {
-          print('Fetched ${entriesSnapshot.docs.length} entries.');
+        for (var doc in entriesSnapshot.docs) {
+          var data = doc.data() as Map<String, dynamic>;
+          DateTime date = (data['date'] as Timestamp).toDate();
+          int dayOfWeek = date.weekday; // 1 (Monday) to 7 (Sunday)
+          double milkInLitres =
+              double.tryParse(data['final_in_litres'].toString()) ?? 0;
+          double pricePerLitre =
+              double.tryParse(data['price_per_litre'].toString()) ?? 0;
 
-          for (var doc in entriesSnapshot.docs) {
-            var data = doc.data() as Map<String, dynamic>;
-            DateTime date = (data['date'] as Timestamp).toDate();
-            int dayOfWeek = date.weekday; // 1 (Monday) to 7 (Sunday)
-            double milkInLitres =
-                double.tryParse(data['final_in_litres'].toString()) ?? 0;
-            double pricePerLitre =
-                double.tryParse(data['price_per_litre'].toString()) ?? 0;
+          double totalSale = milkInLitres * pricePerLitre;
 
-            // Print values for debugging
-            print(
-                'Date: $date, Milk in Litres: $milkInLitres, Price per Litre: $pricePerLitre');
-
-            double totalSale = milkInLitres * pricePerLitre;
-
-            // Only add if there's a valid sale
-            if (totalSale > 0) {
-              spots.add(FlSpot(dayOfWeek.toDouble(), totalSale));
-            }
-
-            sales += totalSale;
-            milkDistributed += milkInLitres;
+          if (totalSale > 0) {
+            spots.add(FlSpot(dayOfWeek.toDouble(), totalSale));
           }
+
+          sales += totalSale;
+          milkDistributed += milkInLitres;
         }
 
         if (mounted) {
@@ -140,9 +339,8 @@ class _HomePageState extends State<HomePage> {
           });
         }
 
-        print('Total Sales: $totalSales');
-        print('Total Milk Distributed: $totalMilkDistributed');
-        print('Chart Data: $chartData');
+        print(
+            'Total Sales: $totalSales, Total Milk Distributed: $totalMilkDistributed');
       } catch (e) {
         print('Error fetching data: $e');
       }
@@ -155,116 +353,123 @@ class _HomePageState extends State<HomePage> {
     Navigator.pushNamed(context, route);
   }
 
-  // Future<void> _loadData() async {
-  //   setState(() {
-  //     isLoading = true;
-  //   });
-
-  //   // Fetch data concurrently
-  //   Future.wait([
-  //     _dataService.fetchMilkSalesData().then((data) {
-  //       setState(() {
-  //         fetchedData = data;
-  //       });
-  //     }),
-  //     _dataService.fetchCattleCount().then((count) {
-  //       setState(() {
-  //         cattleCount = count;
-  //       });
-  //     }),
-  //     _dataService.fetchWorkersCount().then((count) {
-  //       setState(() {
-  //         workersCount = count;
-  //       });
-  //     }),
-  //     _dataService.fetchCalvesCount().then((count) {
-  //       setState(() {
-  //         calvesCount = count;
-  //       });
-  //     }),
-  //   ]).whenComplete(() {
-  //     setState(() {
-  //       isLoading = false;
-  //     });
-  //   });
-  // }
-
   Future<void> _fetchCounts() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (_adminEmail == null) {
+      if (mounted) {
+        setState(() {
+          _cattleCount = 0;
+          _workersCount = 0;
+          _calvesCount = 0;
+        });
+      }
+      return;
+    }
 
-    // Count cattle
-    final cattleCount = await FirebaseFirestore.instance
-        .collection('cattle')
-        .where('userId', isEqualTo: userId)
-        .get()
-        .then((snapshot) => snapshot.docs.length);
+    try {
+      // Count cattle
+      final cattleSnapshot = await FirebaseFirestore.instance
+          .collection('cattle')
+          .doc(_adminEmail)
+          .collection('entries')
+          .get();
 
-    // Count workers
-    final workersCount = await FirebaseFirestore.instance
-        .collection('workers')
-        .where('userId', isEqualTo: userId)
-        .get()
-        .then((snapshot) => snapshot.docs.length);
+      print('Cattle entries fetched: ${cattleSnapshot.docs.length}');
+      final cattleCount = cattleSnapshot.docs.length;
 
-    // Count calves
-    final calvesCount = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('calves')
-        .get()
-        .then((snapshot) => snapshot.docs.length);
+      // Count workers
+      final workersSnapshot = await FirebaseFirestore.instance
+          .collection('workers')
+          .doc(_adminEmail)
+          .collection('entries')
+          .get();
 
-    // Check if the widget is still mounted before calling setState
-    if (mounted) {
-      setState(() {
-        _cattleCount = cattleCount; // Update state variables
-        _workersCount = workersCount;
-        _calvesCount = calvesCount;
-      });
+      print('Workers entries fetched: ${workersSnapshot.docs.length}');
+      final workersCount = workersSnapshot.docs.length;
+
+      // Count calves
+      final calvesSnapshot = await FirebaseFirestore.instance
+          .collection('calves')
+          .doc(_adminEmail)
+          .collection('entries')
+          .get();
+
+      print('Calves entries fetched: ${calvesSnapshot.docs.length}');
+      final calvesCount = calvesSnapshot.docs.length;
+
+      if (mounted) {
+        setState(() {
+          _cattleCount = cattleCount;
+          _workersCount = workersCount;
+          _calvesCount = calvesCount;
+        });
+      }
+    } catch (e) {
+      print('Error fetching counts: $e');
+      if (mounted) {
+        setState(() {
+          _cattleCount = 0;
+          _workersCount = 0;
+          _calvesCount = 0;
+        });
+      }
     }
   }
 
   Future<void> _fetchWeeklyExpenses() async {
     try {
-      final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
       final now = DateTime.now();
-      final startOfWeek = now.subtract(
-          Duration(days: now.weekday - 1)); // Monday of the current week
-      final endOfWeek =
-          startOfWeek.add(Duration(days: 6)); // Sunday of the current week
+      final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+      final endOfWeek = startOfWeek.add(Duration(days: 6));
 
-      // Fetch expenses for the current week
-      QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('feeds')
-          .where('userId', isEqualTo: userId) // Filter by userId
-          .where('date',
-              isGreaterThanOrEqualTo:
-                  DateFormat('yyyy-MM-dd').format(startOfWeek))
-          .where('date',
-              isLessThanOrEqualTo: DateFormat('yyyy-MM-dd').format(endOfWeek))
-          .get();
+      print('Start of Week: ${startOfWeek.toIso8601String()}');
+      print('End of Week: ${endOfWeek.toIso8601String()}');
 
-      // Reset daily expenses
-      dailyExpenses = List<double>.filled(7, 0.0);
+      if (_adminEmail != null) {
+        print('Admin Email: $_adminEmail');
 
-      for (var doc in snapshot.docs) {
-        var data = doc.data() as Map<String, dynamic>;
-        String dateString = data['date']; // Get the date as a string
-        DateTime date =
-            DateFormat('yyyy-MM-dd').parse(dateString); // Parse it to DateTime
-        double cost = data['cost'] ?? 0.0;
+        QuerySnapshot snapshot = await FirebaseFirestore.instance
+            .collection('feeds')
+            .doc(_adminEmail)
+            .collection('entries')
+            .get();
 
-        // Sum costs for each day of the week
-        int dayIndex = date.weekday - 1; // 0 = Monday, 6 = Sunday
-        dailyExpenses[dayIndex] += cost;
+        // Reset daily expenses before processing
+        List<double> dailyExpenses = List<double>.filled(7, 0.0);
+
+        for (var doc in snapshot.docs) {
+          var data = doc.data() as Map<String, dynamic>;
+
+          // Handle different types for date
+          DateTime date;
+          if (data['date'] is Timestamp) {
+            date = (data['date'] as Timestamp).toDate();
+          } else if (data['date'] is String) {
+            date = DateTime.parse(data['date']);
+          } else {
+            print('Unexpected date format for document ID: ${doc.id}');
+            continue; // Skip this document if date format is unexpected
+          }
+
+          double cost = data['cost'] ?? 0.0;
+
+          int dayIndex = date.weekday - 1; // 0 = Monday, 6 = Sunday
+          dailyExpenses[dayIndex] += cost;
+
+          print('Document ID: ${doc.id}, Date: $date, Cost: $cost');
+        }
+
+        print('Fetched ${snapshot.docs.length} expenses.');
+        print('Daily Expenses: $dailyExpenses');
+
+        // Update state with the calculated daily expenses and chart data
+        setState(() {
+          this.dailyExpenses = dailyExpenses; // Store the expenses
+          chartData = List<FlSpot>.generate(
+              7, (index) => FlSpot(index.toDouble(), dailyExpenses[index]));
+        });
+      } else {
+        print('Admin email is null, cannot fetch expenses.');
       }
-
-      // Prepare data for the chart
-      chartData = List<FlSpot>.generate(
-          7, (index) => FlSpot(index.toDouble(), dailyExpenses[index]));
-
-      print('Weekly Expenses: $dailyExpenses'); // Debug print to check expenses
-      setState(() {}); // Refresh the widget
     } catch (e) {
       print('Error fetching weekly expenses: $e');
     }
@@ -287,40 +492,28 @@ class _HomePageState extends State<HomePage> {
               child: PageView(
                 scrollDirection: Axis.horizontal,
                 controller: _controller,
-                children: const [
+                children: [
                   MyCard(
-                    balance: 1543.34,
+                    balance: _monthlyRevenue + _cowSales,
                     cardHeader: 'Total monthly production',
-                    cardNumber: 1130000,
-                    expiryMonth: 12,
-                    expiryYear: 29,
                     color: Color.fromARGB(255, 88, 216, 92),
                     backgroundImage: 'assets/milk_sales.jpeg',
                   ),
                   MyCard(
-                    balance: 68274.34,
+                    balance: _cowSales,
                     cardHeader: 'Cow Sales',
-                    cardNumber: 250000,
-                    expiryMonth: 12,
-                    expiryYear: 29,
                     color: Color.fromARGB(255, 27, 187, 152),
                     backgroundImage: 'assets/card_background_2.jpg',
                   ),
                   MyCard(
-                    balance: 7863.34,
+                    balance: -_feedCost,
                     cardHeader: 'Cow Feeds Management',
-                    cardNumber: -538,
-                    expiryMonth: 12,
-                    expiryYear: 29,
                     color: Color.fromARGB(255, 18, 99, 161),
                     backgroundImage: 'assets/card_background_3.jpg',
                   ),
                   MyCard(
-                    balance: 10982.34,
+                    balance: -_salaryCost,
                     cardHeader: 'Employee Salary management',
-                    cardNumber: -120000,
-                    expiryMonth: 12,
-                    expiryYear: 29,
                     color: Color.fromARGB(255, 10, 72, 13),
                     backgroundImage: 'assets/slaary.jpeg',
                   ),
@@ -418,26 +611,14 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              WorkerListPage(), // Navigate to Workers List
-                        ),
-                      );
+                      Navigator.pushNamed(context, '/workerList');
                     },
                     child: const Text('My Employees'),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              ReportsPage(), // Navigate to reportst
-                        ),
-                      );
+                      Navigator.pushNamed(context, '/reports');
                     },
                     child: const Text('Reports'),
                   ),
@@ -553,65 +734,67 @@ class _HomePageState extends State<HomePage> {
                 Container(
                   margin: const EdgeInsets.only(top: 16.0),
                   height: 300.0,
-                  child: LineChart(
-                    LineChartData(
-                      gridData: FlGridData(show: false),
-                      titlesData: FlTitlesData(
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 30,
-                            getTitlesWidget: (value, meta) {
-                              int index = value.toInt();
-                              if (index >= 1 && index <= 7) {
-                                return Text([
-                                  'Mon',
-                                  'Tue',
-                                  'Wed',
-                                  'Thu',
-                                  'Fri',
-                                  'Sat',
-                                  'Sun'
-                                ][index - 1]);
-                              }
-                              return const Text('');
-                            },
+                  child: chartData.isNotEmpty
+                      ? LineChart(
+                          LineChartData(
+                            gridData: FlGridData(show: false),
+                            titlesData: FlTitlesData(
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 30,
+                                  getTitlesWidget: (value, meta) {
+                                    int index = value.toInt();
+                                    if (index >= 1 && index <= 7) {
+                                      return Text([
+                                        'Mon',
+                                        'Tue',
+                                        'Wed',
+                                        'Thu',
+                                        'Fri',
+                                        'Sat',
+                                        'Sun'
+                                      ][index - 1]);
+                                    }
+                                    return const Text('');
+                                  },
+                                ),
+                              ),
+                              leftTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 50,
+                                  getTitlesWidget: (value, meta) {
+                                    return Text(value.toInt().toString());
+                                  },
+                                ),
+                              ),
+                              rightTitles: AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                            ),
+                            borderData: FlBorderData(show: false),
+                            lineBarsData: [
+                              LineChartBarData(
+                                spots: chartData,
+                                isCurved: true,
+                                color: Colors.green,
+                                dotData: FlDotData(show: false),
+                                belowBarData: BarAreaData(show: false),
+                              ),
+                            ],
+                            minX: 1,
+                            maxX: 7,
+                            minY: 0,
+                            maxY: chartData.isNotEmpty
+                                ? chartData
+                                        .map((spot) => spot.y)
+                                        .reduce((a, b) => a > b ? a : b) *
+                                    1.2
+                                : 1, // Default value if chartData is empty
                           ),
-                        ),
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 50,
-                            getTitlesWidget: (value, meta) {
-                              return Text(value.toInt().toString());
-                            },
-                          ),
-                        ),
-                        rightTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: chartData,
-                          isCurved: true,
-                          color: Colors.green,
-                          dotData: FlDotData(show: false),
-                          belowBarData: BarAreaData(show: false),
-                        ),
-                      ],
-                      minX: 1,
-                      maxX: 7,
-                      minY: 0,
-                      maxY: chartData.isNotEmpty
-                          ? chartData
-                                  .map((spot) => spot.y)
-                                  .reduce((a, b) => a > b ? a : b) *
-                              1.2
-                          : 1,
-                    ),
-                  ),
+                        )
+                      : Center(child: Text('No data available')),
                 ),
                 const SizedBox(height: 8.0),
                 const Text(
@@ -630,6 +813,18 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildExpenseOverviewCard(BuildContext context) {
+    // Determine the highest expense to set color thresholds
+    double maxExpense = dailyExpenses.reduce((a, b) => a > b ? a : b);
+    Color getColor(double value) {
+      if (value > maxExpense * 0.75) {
+        return Colors.green; // High
+      } else if (value > maxExpense * 0.25) {
+        return Colors.yellow; // Medium
+      } else {
+        return Colors.red; // Low
+      }
+    }
+
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.0),
@@ -638,7 +833,8 @@ class _HomePageState extends State<HomePage> {
         decoration: BoxDecoration(
           image: const DecorationImage(
             image: AssetImage(
-                'assets/abstract-light-blue-wide-background-with-radial-blue-gradients-vector.jpg'),
+              'assets/abstract-light-blue-wide-background-with-radial-blue-gradients-vector.jpg',
+            ),
             fit: BoxFit.cover,
           ),
           borderRadius: BorderRadius.circular(12.0),
@@ -689,15 +885,13 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       rightTitles: AxisTitles(
-                        sideTitles:
-                            SideTitles(showTitles: false), // No right titles
+                        sideTitles: SideTitles(showTitles: false),
                       ),
                       topTitles: AxisTitles(
-                        sideTitles:
-                            SideTitles(showTitles: false), // No top titles
+                        sideTitles: SideTitles(showTitles: false),
                       ),
                     ),
-                    borderData: FlBorderData(show: false), // No borders
+                    borderData: FlBorderData(show: false),
                     barGroups: List.generate(
                       7,
                       (index) => BarChartGroupData(
@@ -705,24 +899,21 @@ class _HomePageState extends State<HomePage> {
                         barRods: [
                           BarChartRodData(
                             toY: dailyExpenses[index],
-                            color: Colors.green,
-                            width: 20, // Increase bar thickness
+                            color: getColor(dailyExpenses[index]),
+                            width: 32,
+                            borderRadius: BorderRadius.circular(6),
                           ),
                         ],
                       ),
                     ),
-                    gridData: FlGridData(show: false), // Remove grid lines
+                    gridData: FlGridData(show: false),
                   ),
                 ),
               ),
               const SizedBox(height: 10),
               GestureDetector(
                 onTap: () {
-                  // Navigate to FeedsPage
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => FeedsPage()),
-                  );
+                  Navigator.pushNamed(context, '/feeds');
                 },
                 child: const Text(
                   'Tap for more details',
@@ -738,61 +929,6 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
-  }
-
-  List<BarChartGroupData> _createBarChartData() {
-    return [
-      BarChartGroupData(
-        x: 0,
-        barRods: [
-          BarChartRodData(toY: 5000, color: Colors.blue),
-        ],
-      ),
-      BarChartGroupData(
-        x: 1,
-        barRods: [
-          BarChartRodData(toY: 2500, color: Colors.blue),
-        ],
-      ),
-      BarChartGroupData(
-        x: 2,
-        barRods: [
-          BarChartRodData(toY: 10000, color: Colors.blue),
-        ],
-      ),
-      BarChartGroupData(
-        x: 3,
-        barRods: [
-          BarChartRodData(toY: 7500, color: Colors.blue),
-        ],
-      ),
-    ];
-  }
-
-  List<PieChartSectionData> _createPieChartData() {
-    return [
-      PieChartSectionData(value: 30, color: Colors.blue, title: '30%'),
-      PieChartSectionData(value: 20, color: Colors.red, title: '20%'),
-      PieChartSectionData(value: 25, color: Colors.green, title: '25%'),
-      PieChartSectionData(value: 25, color: Colors.orange, title: '25%'),
-    ];
-  }
-
-  List<LineChartBarData> _createLineChartData() {
-    return [
-      LineChartBarData(
-        spots: [
-          const FlSpot(0, 5000),
-          const FlSpot(1, 2500),
-          const FlSpot(2, 10000),
-          const FlSpot(3, 7500),
-        ],
-        isCurved: true,
-        color: Colors.blue,
-        dotData: const FlDotData(show: true),
-        belowBarData: BarAreaData(show: true),
-      ),
-    ];
   }
 
   Widget _buildInventorySection() {
@@ -952,13 +1088,7 @@ class _HomePageState extends State<HomePage> {
         Expanded(
           child: GestureDetector(
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      WorkerListPage(), // Navigate to Workers List
-                ),
-              );
+              Navigator.pushNamed(context, '/workerList');
             },
             child: _buildInfoCard(
               'Employees',

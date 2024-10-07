@@ -1,12 +1,14 @@
 import 'package:dairy_harbor/components/inventory_components/add_machinery_page.dart';
 import 'package:dairy_harbor/components/inventory_components/edit_machinery_page.dart';
 import 'package:dairy_harbor/components/inventory_components/machinery_details_page.dart';
+import 'package:dairy_harbor/main.dart';
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class FarmMachineryPage extends StatefulWidget {
-  const FarmMachineryPage({super.key});
+  final Future<String?> adminEmailFuture;
+  FarmMachineryPage({super.key, required this.adminEmailFuture});
 
   @override
   _FarmMachineryPageState createState() => _FarmMachineryPageState();
@@ -18,18 +20,29 @@ class _FarmMachineryPageState extends State<FarmMachineryPage> {
   String _selectedFilter = 'All';
   late FirestoreServices _firestoreServices;
   List<Map<String, dynamic>> _machineries = [];
+  String? _adminEmail;
 
   @override
   void initState() {
     super.initState();
     final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-    _firestoreServices = FirestoreServices(userId);
+    final adminEmailFuture =
+        getAdminEmailFromFirestore(); // Ensure to get admin email if needed
+    _firestoreServices = FirestoreServices(userId, adminEmailFuture);
     _fetchMachineries();
+    _fetchAdminEmail();
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
       });
     });
+  }
+
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    print('Admin Email: $_adminEmail');
+    _fetchMachineries();
+    setState(() {});
   }
 
   Future<void> _fetchMachineries() async {
@@ -45,8 +58,10 @@ class _FarmMachineryPageState extends State<FarmMachineryPage> {
 
   List<Map<String, dynamic>> _filteredMachineries() {
     return _machineries.where((machinery) {
-      final nameMatches = (machinery['name'] as String).toLowerCase().contains(_searchQuery);
-      final typeMatches = _selectedFilter == 'All' || machinery['type'] == _selectedFilter;
+      final nameMatches =
+          (machinery['name'] as String).toLowerCase().contains(_searchQuery);
+      final typeMatches =
+          _selectedFilter == 'All' || machinery['type'] == _selectedFilter;
       return nameMatches && typeMatches;
     }).toList();
   }
@@ -90,8 +105,12 @@ class _FarmMachineryPageState extends State<FarmMachineryPage> {
                   width: 150,
                   child: DropdownButtonFormField<String>(
                     value: _selectedFilter,
-                    items: <String>['All', 'Agricultural', 'Construction', 'Others']
-                        .map<DropdownMenuItem<String>>((String value) {
+                    items: <String>[
+                      'All',
+                      'Agricultural',
+                      'Construction',
+                      'Others'
+                    ].map<DropdownMenuItem<String>>((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
                         child: Text(value),
@@ -156,7 +175,8 @@ class _FarmMachineryPageState extends State<FarmMachineryPage> {
                                   maintenanceCost: machinery['maintenanceCost'],
                                 ),
                               ),
-                            ).then((_) => _fetchMachineries()); // Refresh data after viewing details
+                            ).then((_) =>
+                                _fetchMachineries()); // Refresh data after viewing details
                           },
                         ),
                         IconButton(
@@ -175,7 +195,8 @@ class _FarmMachineryPageState extends State<FarmMachineryPage> {
                                   maintenanceCost: machinery['maintenanceCost'],
                                 ),
                               ),
-                            ).then((_) => _fetchMachineries()); // Refresh data after editing
+                            ).then((_) =>
+                                _fetchMachineries()); // Refresh data after editing
                           },
                         ),
                       ],

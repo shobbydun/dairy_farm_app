@@ -1,40 +1,68 @@
-import 'package:dairy_harbor/services_functions/firestore_services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class MedicineDetailPage extends StatefulWidget {
   final String medicineId;
+  final Future<String?> adminEmailFuture;
 
-  const MedicineDetailPage({super.key, required this.medicineId});
+  const MedicineDetailPage({
+    super.key,
+    required this.medicineId,
+    required this.adminEmailFuture,
+  });
 
   @override
   _MedicineDetailPageState createState() => _MedicineDetailPageState();
 }
 
 class _MedicineDetailPageState extends State<MedicineDetailPage> {
-  late FirestoreServices _firestoreServices;
   Map<String, dynamic>? _medicine;
+  String? _adminEmail;
 
   @override
   void initState() {
     super.initState();
-    _firestoreServices = FirestoreServices(FirebaseAuth.instance.currentUser!.uid);
+    _fetchAdminEmail();
     _fetchMedicineDetails();
   }
 
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    setState(() {
+      _fetchMedicineDetails(); // Move this call inside setState to ensure it's called after email fetch
+    });
+  }
+
   Future<void> _fetchMedicineDetails() async {
-    try {
-      final medicine = await _firestoreServices.getMedicine(widget.medicineId);
-      setState(() {
-        _medicine = medicine;
-      });
-    } catch (e) {
-      print('Error fetching medicine details: $e');
+    if (_adminEmail != null) {
+      print("Admin Email: $_adminEmail");
+      try {
+        final medicineDoc = await FirebaseFirestore.instance
+            .collection('medicines')
+            .doc(_adminEmail)
+            .collection('entries')
+            .doc(widget.medicineId)
+            .get();
+
+        if (medicineDoc.exists) {
+          print("Medicine found: ${medicineDoc.data()}");
+          setState(() {
+            _medicine = medicineDoc.data();
+          });
+        } else {
+          print('Medicine not found');
+        }
+      } catch (e) {
+        print('Error fetching medicine details: $e');
+      }
+    } else {
+      print("Admin email is null");
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Loading state
     if (_medicine == null) {
       return Scaffold(
         appBar: AppBar(
@@ -45,11 +73,23 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
       );
     }
 
-    final name = _medicine!['name'];
-    final quantity = _medicine!['quantity'];
-    final expiryDate = _medicine!['expiryDate'];
-    final supplier = _medicine!['supplier'];
-    final cost = _medicine!['cost']?.toStringAsFixed(2) ?? '0.00'; // Added cost
+    // Check if medicine data is empty
+    if (_medicine!.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Medicine Details'),
+          backgroundColor: Colors.blueAccent,
+        ),
+        body: Center(child: Text('No details available for this medicine.')),
+      );
+    }
+
+    // Data available, proceed to display
+    final name = _medicine!['name'] ?? 'N/A';
+    final quantity = _medicine!['quantity']?.toString() ?? 'N/A';
+    final expiryDate = _medicine!['expiryDate'] ?? 'N/A';
+    final supplier = _medicine!['supplier'] ?? 'N/A';
+    final cost = _medicine!['cost']?.toStringAsFixed(2) ?? '0.00';
 
     return Scaffold(
       appBar: AppBar(
@@ -72,10 +112,12 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildDetailRow(Icons.medical_services, 'Name:', name),
-                    _buildDetailRow(Icons.confirmation_number, 'Quantity:', quantity),
-                    _buildDetailRow(Icons.calendar_today, 'Expiry Date:', expiryDate),
+                    _buildDetailRow(
+                        Icons.confirmation_number, 'Quantity:', quantity),
+                    _buildDetailRow(
+                        Icons.calendar_today, 'Expiry Date:', expiryDate),
                     _buildDetailRow(Icons.store, 'Supplier:', supplier),
-                    _buildDetailRow(Icons.money, 'Cost:', '\Kshs $cost'), // Added cost row
+                    _buildDetailRow(Icons.money, 'Cost:', '\Kshs $cost'),
                   ],
                 ),
               ),
@@ -103,7 +145,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
+  Widget _buildDetailRow(IconData icon, String label, String? value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -111,7 +153,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
           Icon(icon, color: Colors.blueAccent),
           SizedBox(width: 10),
           Text(
-            '$label $value',
+            '$label ${value ?? 'N/A'}',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
         ],

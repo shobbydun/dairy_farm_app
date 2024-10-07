@@ -6,9 +6,6 @@ import 'package:flutter/material.dart';
 class MyCard extends StatelessWidget {
   final double balance;
   final String cardHeader;
-  final int cardNumber;
-  final int expiryMonth;
-  final int expiryYear;
   final Color color;
   final String backgroundImage; // Add image as a variable
 
@@ -16,10 +13,7 @@ class MyCard extends StatelessWidget {
     super.key,
     required this.balance,
     required this.cardHeader,
-    required this.cardNumber,
     required this.color,
-    required this.expiryMonth,
-    required this.expiryYear,
     required this.backgroundImage, // Required background image
   });
 
@@ -60,19 +54,7 @@ class MyCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  cardNumber.toString(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                  ),
-                ),
-                Text(
-                  "$expiryMonth/$expiryYear",
-                  style: const TextStyle(
-                    color: Colors.white,
-                  ),
-                )
-              ],
+              ]
             )
           ],
         ),

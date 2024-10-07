@@ -1,3 +1,4 @@
+import 'package:dairy_harbor/main.dart';
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -21,9 +22,15 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
   @override
   void initState() {
     super.initState();
-    _firestoreServices = FirestoreServices(FirebaseAuth.instance.currentUser!.uid);
+    _initializeFirestoreServices();
   }
 
+  Future<void> _initializeFirestoreServices() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final adminEmailFuture = getAdminEmailFromFirestore(); // Fetch admin email future
+    _firestoreServices = FirestoreServices(userId, adminEmailFuture);
+    setState(() {}); // Call setState if you want to rebuild the UI
+  }
   @override
   void dispose() {
     _nameController.dispose();

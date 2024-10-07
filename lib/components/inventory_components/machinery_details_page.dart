@@ -1,3 +1,4 @@
+import 'package:dairy_harbor/main.dart';
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +28,22 @@ class MachineryDetailsPage extends StatefulWidget {
 }
 
 class _MachineryDetailsPageState extends State<MachineryDetailsPage> {
+  late FirestoreServices _firestoreServices;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeFirestoreServices();
+  }
+
+  Future<void> _initializeFirestoreServices() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+    final adminEmailFuture = getAdminEmailFromFirestore();
+
+    _firestoreServices = FirestoreServices(userId, adminEmailFuture);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -49,12 +66,18 @@ class _MachineryDetailsPageState extends State<MachineryDetailsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildDetailRow(Icons.settings, 'Name:', widget.machineryName),
-                    _buildDetailRow(Icons.category, 'Type:', widget.machineryType),
-                    _buildDetailRow(Icons.health_and_safety, 'Condition:', widget.machineryCondition),
-                    _buildDetailRow(Icons.date_range, 'Date Acquired:', widget.dateAcquired),
-                    _buildDetailRow(Icons.monetization_on, 'Purchase Cost:', '\Kshs ${widget.buyCost.toStringAsFixed(2)}'),
-                    _buildDetailRow(Icons.monetization_on, 'Maintenance Cost:', '\Kshs ${widget.maintenanceCost.toStringAsFixed(2)}'),
+                    _buildDetailRow(
+                        Icons.settings, 'Name:', widget.machineryName),
+                    _buildDetailRow(
+                        Icons.category, 'Type:', widget.machineryType),
+                    _buildDetailRow(Icons.health_and_safety, 'Condition:',
+                        widget.machineryCondition),
+                    _buildDetailRow(Icons.date_range, 'Date Acquired:',
+                        widget.dateAcquired),
+                    _buildDetailRow(Icons.monetization_on, 'Purchase Cost:',
+                        'Kshs ${widget.buyCost.toStringAsFixed(2)}'),
+                    _buildDetailRow(Icons.monetization_on, 'Maintenance Cost:',
+                        'Kshs ${widget.maintenanceCost.toStringAsFixed(2)}'),
                   ],
                 ),
               ),
@@ -108,7 +131,8 @@ class _MachineryDetailsPageState extends State<MachineryDetailsPage> {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: Text('Confirm Deletion'),
-          content: Text('Are you sure you want to delete this machinery record?'),
+          content:
+              Text('Are you sure you want to delete this machinery record?'),
           actions: [
             TextButton(
               onPressed: () {
@@ -120,12 +144,8 @@ class _MachineryDetailsPageState extends State<MachineryDetailsPage> {
               onPressed: () async {
                 Navigator.of(dialogContext).pop(); // Close the dialog
 
-                // Perform deletion operation
-                final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-                final firestoreServices = FirestoreServices(userId);
-
                 try {
-                  await firestoreServices.deleteMachinery(widget.machineryId);
+                  await _firestoreServices.deleteMachinery(widget.machineryId);
 
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(

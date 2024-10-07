@@ -147,6 +147,7 @@ class _DewormingPageState extends State<DewormingPage> {
           'cattle_name': _selectedCattleName, // Save the name
           'cattle_serial_number':
               _cattleSerialNumberController.text, // Save serial number
+          'cattle_id': _selectedCattleId, // Add cattle_id here
           'vet_name': vetName,
           'method': method,
           'disease': disease,
@@ -154,7 +155,6 @@ class _DewormingPageState extends State<DewormingPage> {
           'notes': notes,
           'cost': double.tryParse(cost) ?? 0.0, // Save cost as double
         });
-        // ...
       } else {
         // Update existing record
         await _dewormingCollection.doc(_editingDocId).update({
@@ -162,6 +162,7 @@ class _DewormingPageState extends State<DewormingPage> {
           'cattle_name': _selectedCattleName, // Update the name
           'cattle_serial_number':
               _cattleSerialNumberController.text, // Update serial number
+          'cattle_id': _selectedCattleId, // Update cattle_id here
           'vet_name': vetName,
           'method': method,
           'disease': disease,
@@ -203,15 +204,26 @@ class _DewormingPageState extends State<DewormingPage> {
   void _editRecord(DocumentSnapshot doc) {
     setState(() {
       _editingDocId = doc.id;
-      _selectedCattleId = doc['cattle_id']; // Match the field names
-      _dateOfDewormingController.text = doc['date'];
-      _vetNameController.text = doc['vet_name'];
-      _methodController.text = doc['method'];
-      _diseaseController.text = doc['disease'];
-      _drugUsedController.text = doc['drug_used'];
-      _notesController.text = doc['notes'];
+
+      // Cast doc.data() to Map<String, dynamic>
+      final data = doc.data() as Map<String, dynamic>;
+
+      // Check if 'cattle_id' exists
+      if (data.containsKey('cattle_id')) {
+        _selectedCattleId = data['cattle_id'];
+      } else {
+        _selectedCattleId =
+            null; // Handle the absence of cattle_id appropriately
+      }
+
+      _dateOfDewormingController.text = data['date'] ?? '';
+      _vetNameController.text = data['vet_name'] ?? '';
+      _methodController.text = data['method'] ?? '';
+      _diseaseController.text = data['disease'] ?? '';
+      _drugUsedController.text = data['drug_used'] ?? '';
+      _notesController.text = data['notes'] ?? '';
       _costController.text =
-          doc['cost']?.toString() ?? ''; // Ensure correct type
+          data['cost']?.toString() ?? ''; // Ensure correct type
       _isFormVisible = true;
     });
   }
@@ -239,26 +251,21 @@ class _DewormingPageState extends State<DewormingPage> {
         title: Text('Deworming'),
         backgroundColor: Colors.lightBlueAccent,
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    _buildHeaderCard(),
-                    const SizedBox(height: 16.0),
-                    if (_isFormVisible) _buildDewormingForm(),
-                    const SizedBox(height: 16.0),
-                    _buildDewormingList(),
-                  ],
-                ),
-              ),
-            ),
+      body: SingleChildScrollView(
+        // Changed to SingleChildScrollView
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildHeaderCard(),
+              const SizedBox(height: 16.0),
+              if (_isFormVisible) _buildDewormingForm(),
+              const SizedBox(height: 16.0),
+              _buildDewormingList(),
+            ],
           ),
-        ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -490,83 +497,94 @@ class _DewormingPageState extends State<DewormingPage> {
     );
   }
 
-Widget _buildDewormingList() {
-  return Card(
-    elevation: 6.0,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Deworming List',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16.0),
-          _dewormingList.isNotEmpty
-              ? Column(
-                  children: _dewormingList.map((doc) {
-                    final cattleName = doc['cattle_name'] ?? '';
-                    final cattleSerialNumber = doc['cattle_serial_number'] ?? '';
-                    final date = doc['date'] ?? '';
-                    final vetName = doc['vet_name'] ?? '';
-                    final method = doc['method'] ?? '';
-                    final disease = doc['disease'] ?? '';
-                    final drugUsed = doc['drug_used'] ?? '';
-                    final notes = doc['notes'] ?? '';
-                    final cost = (doc.data() as Map<String, dynamic>).containsKey('cost')
-                        ? doc['cost']
-                        : 'N/A';
+  Widget _buildDewormingList() {
+    return Card(
+      elevation: 6.0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Deworming List',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16.0),
+            // Set a fixed height for the ListView to avoid layout issues
+            SizedBox(
+              height: 400, // Adjust this height based on your UI requirements
+              child: _dewormingList.isNotEmpty
+                  ? ListView.builder(
+                      itemCount: _dewormingList.length,
+                      itemBuilder: (context, index) {
+                        final doc = _dewormingList[index];
+                        final cattleName = doc['cattle_name'] ?? '';
+                        final cattleSerialNumber =
+                            doc['cattle_serial_number'] ?? '';
+                        final date = doc['date'] ?? '';
+                        final vetName = doc['vet_name'] ?? '';
+                        final method = doc['method'] ?? '';
+                        final disease = doc['disease'] ?? '';
+                        final drugUsed = doc['drug_used'] ?? '';
+                        final notes = doc['notes'] ?? '';
+                        final cost = (doc.data() as Map<String, dynamic>)
+                                .containsKey('cost')
+                            ? doc['cost']
+                            : 'N/A';
 
-                    return Card(
-                      elevation: 4.0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      margin: const EdgeInsets.only(bottom: 8.0),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Date: $date', style: TextStyle(fontWeight: FontWeight.bold)),
-                            Text('Cattle Name: $cattleName'),
-                            Text('Cattle Serial Number: $cattleSerialNumber'),
-                            Text('Veterinary Doctor: $vetName'),
-                            Text('Method: $method'),
-                            Text('Disease: $disease'),
-                            Text('Drug Used: $drugUsed'),
-                            Text('Cost: \$${cost.toString()}', style: TextStyle(color: Colors.green)),
-                            Text('Notes: $notes'),
-                            Spacer(), // This pushes the actions to the bottom
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
+                        return Card(
+                          elevation: 4.0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          margin: const EdgeInsets.only(bottom: 8.0),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                IconButton(
-                                  icon: Icon(Icons.edit, color: Colors.blue),
-                                  onPressed: () => _editRecord(doc),
-                                ),
-                                IconButton(
-                                  icon: Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () => _deleteRecord(doc.id),
+                                Text('Date: $date',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold)),
+                                Text('Cattle Name: $cattleName'),
+                                Text(
+                                    'Cattle Serial Number: $cattleSerialNumber'),
+                                Text('Veterinary Doctor: $vetName'),
+                                Text('Method: $method'),
+                                Text('Disease: $disease'),
+                                Text('Drug Used: $drugUsed'),
+                                Text('Cost: \Kshs${cost.toString()}',
+                                    style: TextStyle(color: Colors.green)),
+                                Text('Notes: $notes'),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    IconButton(
+                                      icon:
+                                          Icon(Icons.edit, color: Colors.blue),
+                                      onPressed: () => _editRecord(doc),
+                                    ),
+                                    IconButton(
+                                      icon:
+                                          Icon(Icons.delete, color: Colors.red),
+                                      onPressed: () => _deleteRecord(doc.id),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                )
-              : Text('No Deworming records found.'),
-        ],
+                          ),
+                        );
+                      },
+                    )
+                  : Text('No Deworming records found.'),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
-
-
+    );
+  }
 }

@@ -1,10 +1,15 @@
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class FeedsPage extends StatefulWidget {
-  const FeedsPage({super.key});
+  final Future<String?> adminEmailFuture;
+  final FirestoreServices firestoreServices;
+
+  FeedsPage(
+      {super.key,
+      required this.adminEmailFuture,
+      required this.firestoreServices}); // Update the constructor
 
   @override
   _FeedsPageState createState() => _FeedsPageState();
@@ -15,18 +20,29 @@ class _FeedsPageState extends State<FeedsPage> {
   String _searchQuery = '';
   late FirestoreServices _firestoreServices;
   List<Map<String, dynamic>> _feeds = [];
+  String? _adminEmail;
 
   @override
   void initState() {
     super.initState();
-    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-    _firestoreServices = FirestoreServices(userId);
+    _firestoreServices = widget.firestoreServices; // Initialize here
     _fetchFeeds();
+    _fetchAdminEmail();
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
       });
     });
+  }
+
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    print('Admin Email: $_adminEmail'); // Debugging line
+
+    // Only fetch feeds if the widget is still mounted
+    if (mounted) {
+      await _fetchFeeds(); // Fetch feeds and update state
+    }
   }
 
   @override
@@ -50,17 +66,22 @@ class _FeedsPageState extends State<FeedsPage> {
 
   List<Map<String, dynamic>> _filteredFeeds() {
     return _feeds.where((feed) {
-      final nameMatches = (feed['name'] as String).toLowerCase().contains(_searchQuery);
+      final nameMatches =
+          (feed['name'] as String).toLowerCase().contains(_searchQuery);
       return nameMatches;
     }).toList();
   }
 
-  Future<void> _showFeedDialog({Map<String, dynamic>? feed, bool isEditing = false}) async {
+  Future<void> _showFeedDialog(
+      {Map<String, dynamic>? feed, bool isEditing = false}) async {
     final nameController = TextEditingController(text: feed?['name'] ?? '');
-    final supplierController = TextEditingController(text: feed?['supplier'] ?? '');
-    final quantityController = TextEditingController(text: feed?['quantity'] ?? '');
+    final supplierController =
+        TextEditingController(text: feed?['supplier'] ?? '');
+    final quantityController =
+        TextEditingController(text: feed?['quantity'] ?? '');
     final dateController = TextEditingController(text: feed?['date'] ?? '');
-    final costController = TextEditingController(text: (feed?['cost'] ?? '').toString());
+    final costController =
+        TextEditingController(text: (feed?['cost'] ?? '').toString());
 
     final action = isEditing ? 'Update' : 'Add';
 
@@ -76,7 +97,7 @@ class _FeedsPageState extends State<FeedsPage> {
         context: context,
         initialDate: initialDate,
         firstDate: DateTime(2000),
-        lastDate: DateTime(2101),
+        lastDate: DateTime.now(),
       );
 
       if (pickedDate != null && pickedDate != initialDate) {
@@ -142,6 +163,9 @@ class _FeedsPageState extends State<FeedsPage> {
                 final date = dateController.text;
                 final cost = double.tryParse(costController.text) ?? 0.0;
 
+                print(
+                    'Adding Feed: $name, Supplier: $supplier, Quantity: $quantity, Date: $date, Cost: $cost'); // Debugging line
+
                 if (isEditing && feed != null) {
                   await _firestoreServices.updateFeed(feed['id'], {
                     'name': name,
@@ -151,7 +175,8 @@ class _FeedsPageState extends State<FeedsPage> {
                     'cost': cost,
                   });
                 } else {
-                  await _firestoreServices.addFeed(name, supplier, quantity, date, cost);
+                  await _firestoreServices.addFeed(
+                      name, supplier, quantity, date, cost);
                 }
 
                 Navigator.of(context).pop();
@@ -191,7 +216,8 @@ class _FeedsPageState extends State<FeedsPage> {
           IconButton(
             icon: Icon(Icons.add),
             onPressed: () {
-              _showFeedDialog(isEditing: false); // Open dialog to add a new feed
+              _showFeedDialog(
+                  isEditing: false); // Open dialog to add a new feed
             },
           ),
         ],
@@ -233,7 +259,8 @@ class _FeedsPageState extends State<FeedsPage> {
               child: Column(
                 children: _filteredFeeds().map((feed) {
                   return Container(
-                    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    margin:
+                        const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
@@ -248,7 +275,7 @@ class _FeedsPageState extends State<FeedsPage> {
                     child: ListTile(
                       title: Text(feed['name']!),
                       subtitle: Text(
-                        'Supplier: ${feed['supplier']}\nQuantity: ${feed['quantity']}\nDate: ${feed['date']}\nCost: \Kshs${feed['cost'].toStringAsFixed(2)}',
+                        'Supplier: ${feed['supplier']}\nQuantity: ${feed['quantity']}\nDate: ${feed['date']}\nCost: Kshs ${feed['cost'].toStringAsFixed(2)}',
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -256,7 +283,10 @@ class _FeedsPageState extends State<FeedsPage> {
                           IconButton(
                             icon: Icon(Icons.edit, color: Colors.blue),
                             onPressed: () {
-                              _showFeedDialog(feed: feed, isEditing: true); // Open dialog to edit existing feed
+                              _showFeedDialog(
+                                  feed: feed,
+                                  isEditing:
+                                      true); // Open dialog to edit existing feed
                             },
                           ),
                           IconButton(
@@ -267,14 +297,17 @@ class _FeedsPageState extends State<FeedsPage> {
                                 builder: (context) {
                                   return AlertDialog(
                                     title: Text('Delete Feed'),
-                                    content: Text('Are you sure you want to delete this feed?'),
+                                    content: Text(
+                                        'Are you sure you want to delete this feed?'),
                                     actions: [
                                       TextButton(
-                                        onPressed: () => Navigator.of(context).pop(false),
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(false),
                                         child: Text('Cancel'),
                                       ),
                                       TextButton(
-                                        onPressed: () => Navigator.of(context).pop(true),
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(true),
                                         child: Text('Delete'),
                                       ),
                                     ],

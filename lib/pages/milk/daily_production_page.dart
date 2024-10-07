@@ -46,36 +46,38 @@ class _MilkProductionPageState extends State<MilkProductionPage> {
     setState(() {});
   }
 
-  Future<void> _fetchData() async {
-    if (_adminEmail != null) {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('milk_production')
-          .doc(_adminEmail)
-          .collection('entries')
-          .get();
+ Future<void> _fetchData() async {
+  if (_adminEmail != null) {
+    QuerySnapshot snapshot = await FirebaseFirestore.instance
+        .collection('milk_production')
+        .doc(_adminEmail)
+        .collection('entries')
+        .orderBy('date', descending: true) // Order by 'date' in descending order
+        .get();
 
-      if (mounted) {
-        setState(() {
-          _tableData = snapshot.docs.map((doc) {
-            Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-            print('Fetched data for doc ${doc.id}: $data');
-            return {
-              'id': doc.id,
-              'Date': (data['date'] as Timestamp).toDate(),
-              'Milk in Litres': data['milk_in_litres']?.toString() ?? '',
-              'Given to Calves': data['given_to_calves']?.toString() ?? '',
-              'Spillage': data['spillage']?.toString() ?? '',
-              'Spoiled': data['spoiled']?.toString() ?? '',
-              'Final Milk Litres': data['final_in_litres']?.toString() ?? '',
-              'Price per Litre': data['price_per_litre']?.toString() ?? '',
-              'Admin Email': data['admin_email'] ?? '',
-              'Filled In By': data['filled_in_by'] ?? 'Not specified',
-            };
-          }).toList();
-        });
-      }
+    if (mounted) {
+      setState(() {
+        _tableData = snapshot.docs.map((doc) {
+          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+          print('Fetched data for doc ${doc.id}: $data');
+          return {
+            'id': doc.id,
+            'Date': (data['date'] as Timestamp).toDate(),
+            'Milk in Litres': data['milk_in_litres']?.toString() ?? '',
+            'Given to Calves': data['given_to_calves']?.toString() ?? '',
+            'Spillage': data['spillage']?.toString() ?? '',
+            'Spoiled': data['spoiled']?.toString() ?? '',
+            'Final Milk Litres': data['final_in_litres']?.toString() ?? '',
+            'Price per Litre': data['price_per_litre']?.toString() ?? '',
+            'Admin Email': data['admin_email'] ?? '',
+            'Filled In By': data['filled_in_by'] ?? 'Not specified',
+          };
+        }).toList();
+      });
     }
   }
+}
+
 
   Future<void> _addEntry() async {
     String? userEmail = getCurrentUserEmail();

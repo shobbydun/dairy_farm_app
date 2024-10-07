@@ -1,21 +1,49 @@
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 
-import 'farm_machinery_page.dart';
-import 'feeds_page.dart';
+import '../../main.dart';
 
-class InventoryMainPage extends StatelessWidget {
-  const InventoryMainPage({super.key});
+class InventoryMainPage extends StatefulWidget {
+  final Future<String?> adminEmailFuture;
+  InventoryMainPage({super.key, required this.adminEmailFuture});
+
+  @override
+  State<InventoryMainPage> createState() => _InventoryMainPageState();
+}
+
+class _InventoryMainPageState extends State<InventoryMainPage> {
+  String? _adminEmail;
+  bool isLoading = true;
+  List<FlSpot> chartData = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAdminEmail().then((_) {});
+  }
+
+  Future<double> _fetchTotalWages() async {
+    final firestoreService =
+        Provider.of<FirestoreServices>(context, listen: false);
+    return await firestoreService.getTotalWages();
+  }
+
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    print('Admin Email: $_adminEmail');
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
     final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return ChangeNotifierProvider<FirestoreServices>(
-      create: (context) => FirestoreServices(userId),
+      create: (context) =>
+          FirestoreServices(userId, getAdminEmailFromFirestore()),
       child: Consumer<FirestoreServices>(
         builder: (context, firestoreService, child) {
           return Scaffold(
@@ -25,14 +53,18 @@ class InventoryMainPage extends StatelessWidget {
             ),
             body: FutureBuilder<Map<String, dynamic>>(
               future: Future.wait([
-                firestoreService.getProfile(),
+                firestoreService.getWages(),
                 firestoreService.getFeeds(),
                 firestoreService.getMachinery(),
+                firestoreService.getMedicines('specificMedicineId'),
+                firestoreService.getTotalWages(),
               ]).then((results) {
                 return {
-                  'profile': results[0],
-                  'feeds': results[1],
-                  'machinery': results[2],
+                  'wages': results[0],
+                  'medicine': results[1],
+                  'feeds': results[2],
+                  'machinery': results[3],
+                  'totalWages': results[4],
                 };
               }),
               builder: (context, snapshot) {
@@ -41,14 +73,16 @@ class InventoryMainPage extends StatelessWidget {
                 }
 
                 final data = snapshot.data!;
-                final profile = data['profile'];
+                final medicine = data['medicine'];
                 final feeds = data['feeds'];
-                final machinery = data['machinery'];
+                //final machinery = data['machinery'];
+                final totalWages = data['totalWages'] as double;
 
-                final totalCows = profile?['numberOfCows'] ?? 'N/A';
-                final milkProduction = profile?['dailyMilkProduction'] ?? 'N/A';
+                final wageCost = totalWages.toStringAsFixed(2);
+
+                final medicineCount = medicine.length.toString();
                 final feedStock = feeds.length.toString();
-                final machineryStatus = machinery.isEmpty ? 'N/A' : 'Operational';
+                //final machineryCount =(machinery is List) ? machinery.length.toString() : '0';
 
                 return Padding(
                   padding: const EdgeInsets.all(8.0),
@@ -71,19 +105,19 @@ class InventoryMainPage extends StatelessWidget {
                             child: Row(
                               children: [
                                 _buildStatCard(
-                                  'Total Cows',
-                                  totalCows,
-                                  Icons.pets,
+                                  'Wages',
+                                  'Kshs$wageCost',
+                                  Icons.wallet,
                                   () {
-                                    Navigator.pushNamed(context, '/cattleListPage');
+                                    Navigator.pushNamed(context, '/adminWages');
                                   },
                                 ),
                                 _buildStatCard(
-                                  'Milk Production',
-                                  '$milkProduction Liters',
-                                  Icons.local_drink,
+                                  'Medicine',
+                                  medicineCount,
+                                  Icons.medical_information,
                                   () {
-                                    Navigator.pushNamed(context, '/milkSales');
+                                    Navigator.pushNamed(context, '/medicine');
                                   },
                                 ),
                                 _buildStatCard(
@@ -91,90 +125,25 @@ class InventoryMainPage extends StatelessWidget {
                                   '$feedStock Bags',
                                   Icons.food_bank,
                                   () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => FeedsPage(),
-                                      ),
-                                    );
+                                    Navigator.pushNamed(context, '/feeds');
                                   },
                                 ),
-                                _buildStatCard(
-                                  'Machinery Status',
-                                  machineryStatus,
-                                  Icons.build,
-                                  () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => FarmMachineryPage(),
-                                      ),
-                                    );
-                                  },
-                                ),
+                                // _buildStatCard(
+                                //   'Machinery Status',
+                                //   machineryCount,
+                                //   Icons.build,
+                                //   () {
+                                //     Navigator.pushNamed(context, '/machinery');
+                                //   },
+                                // ),
                               ],
                             ),
                           ),
                         ),
                         SizedBox(height: 16),
 
-                        // Placeholder for Charts/Graphs
-                        Container(
-                          padding: const EdgeInsets.all(8.0),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.lightBlueAccent.withOpacity(0.8),
-                                blurRadius: 8,
-                                offset: Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Milk Production Trends',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: 8),
-                              Container(
-                                height: 200,
-                                child: BarChart(
-                                  BarChartData(
-                                    gridData: FlGridData(show: false),
-                                    titlesData: FlTitlesData(
-                                      bottomTitles: AxisTitles(
-                                        sideTitles: SideTitles(
-                                          showTitles: true,
-                                          reservedSize: 38,
-                                          getTitlesWidget: getBottomTitles,
-                                        ),
-                                      ),
-                                      leftTitles: AxisTitles(
-                                        sideTitles: SideTitles(
-                                          showTitles: true,
-                                          reservedSize: 38,
-                                          getTitlesWidget: getLeftTitles,
-                                        ),
-                                      ),
-                                    ),
-                                    borderData: FlBorderData(
-                                      show: false,
-                                    ),
-                                    barGroups: showingGroups(),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                         SizedBox(height: 16),
+
                         // Navigation buttons
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -183,24 +152,14 @@ class InventoryMainPage extends StatelessWidget {
                               'Feeds Overview',
                               Icons.food_bank,
                               () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => FeedsPage(),
-                                  ),
-                                );
+                                Navigator.pushNamed(context, '/feeds');
                               },
                             ),
                             _buildNavigationButton(
                               'Machinery Overview',
                               Icons.build,
                               () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => FarmMachineryPage(),
-                                  ),
-                                );
+                                Navigator.pushNamed(context, '/machinery');
                               },
                             ),
                           ],
@@ -265,65 +224,5 @@ class InventoryMainPage extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
-  }
-
-  // Dummy functions for chart titles
-  Widget getBottomTitles(double value, TitleMeta meta) {
-    return SideTitleWidget(
-      axisSide: meta.axisSide,
-      child: Text(value.toInt().toString(), style: TextStyle(fontSize: 12)),
-    );
-  }
-
-  Widget getLeftTitles(double value, TitleMeta meta) {
-    return SideTitleWidget(
-      axisSide: meta.axisSide,
-      child: Text(value.toInt().toString(), style: TextStyle(fontSize: 12)),
-    );
-  }
-
-  List<BarChartGroupData> showingGroups() {
-    return [
-      BarChartGroupData(
-        x: 0,
-        barRods: [
-          BarChartRodData(
-              toY: 6,
-              color: Colors.red,
-              width: 30,
-              borderRadius: BorderRadius.circular(5)),
-        ],
-      ),
-      BarChartGroupData(
-        x: 1,
-        barRods: [
-          BarChartRodData(
-              toY: 12,
-              color: Colors.redAccent,
-              width: 30,
-              borderRadius: BorderRadius.circular(5)),
-        ],
-      ),
-      BarChartGroupData(
-        x: 2,
-        barRods: [
-          BarChartRodData(
-              toY: 18,
-              color: Colors.orange,
-              width: 30,
-              borderRadius: BorderRadius.circular(5)),
-        ],
-      ),
-      BarChartGroupData(
-        x: 3,
-        barRods: [
-          BarChartRodData(
-              toY: 24,
-              color: Colors.green,
-              width: 30,
-              borderRadius: BorderRadius.circular(5)),
-        ],
-      ),
-    ];
   }
 }

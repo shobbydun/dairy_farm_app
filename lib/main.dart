@@ -60,9 +60,11 @@ void main() async {
           initialData: null,
         ),
         ChangeNotifierProxyProvider<User?, FirestoreServices>(
-          create: (context) => FirestoreServices(''),
+          create: (context) =>
+              FirestoreServices('', getAdminEmailFromFirestore()),
           update: (context, user, firestoreServices) {
-            return FirestoreServices(user?.uid ?? '');
+            return FirestoreServices(
+                user?.uid ?? '', getAdminEmailFromFirestore());
           },
         ),
       ],
@@ -71,10 +73,29 @@ void main() async {
   );
 }
 
+// Define the function outside of the MyApp class
+Future<String?> getAdminEmailFromFirestore() async {
+  try {
+    final adminSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'admin')
+        .limit(1)
+        .get();
+
+    if (adminSnapshot.docs.isNotEmpty) {
+      return adminSnapshot.docs.first['email'];
+    }
+    print("No admin found");
+  } catch (e) {
+    print("Error fetching admin email: $e");
+  }
+  return null;
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  Future<String?> getAdminEmailFromFirestore() async {
+  static Future<String?> getAdminEmailFromFirestore() async {
     try {
       final adminSnapshot = await FirebaseFirestore.instance
           .collection('users')
@@ -123,25 +144,44 @@ class MyApp extends StatelessWidget {
 
           case '/deworming':
             return _buildAsyncRouteDeworming(settings);
+          case '/miscarriage':
+            return _buildAsyncRouteMiscarriages(settings);
 
-          case '/reports':
-            return _buildPageIfAuthorized(
-                userRole, ReportsPage(), settings.arguments);
-          case '/adminWages':
-            return _buildPageIfAuthorized(
-                userRole, AdministrativeWages(), settings.arguments);
-          case '/machinery':
-            return _buildPageIfAuthorized(
-                userRole, FarmMachineryPage(), settings.arguments);
-          case '/feeds':
-            return _buildPageIfAuthorized(
-                userRole, FeedsPage(), settings.arguments);
-          case '/inventory':
-            return _buildPageIfAuthorized(
-                userRole, InventoryMainPage(), settings.arguments);
+          case '/naturalInsemination':
+            return _buildAsyncRouteNaturalI(settings);
+
+          case '/pestControl':
+            return _buildAsyncRoutePestControl(settings);
+
+          case '/pregnancy':
+            return _buildAsyncRoutePregnancy(settings);
+
+          case '/treatment':
+            return _buildAsyncRouteTreatment(settings);
+
+          case '/vaccination':
+            return _buildAsyncRouteVaccination(settings);
+
           case '/medicine':
-            return _buildPageIfAuthorized(
-                userRole, MedicinePage(), settings.arguments);
+            return _buildAsyncRouteMedicine(settings);
+
+          case '/feeds':
+            return _buildAsyncRouteFeeds(context);
+
+          case '/machinery':
+            return _buildAsyncRouteMachinery(context);
+
+          case '/adminWages':
+            return _buildAsyncRouteAdminAddWages(context);
+
+          case '/inventory':
+            return _buildAsyncRouteInventoryMainPage(context);
+
+          case '/workerList':
+            return _buildAsyncRouteEmployeeList(context);
+            case '/reports':
+            return _buildAsyncRouteReports(context);
+            
           case '/notification':
             return _buildPageIfAuthorized(
                 userRole, NotificationScreen(), settings.arguments);
@@ -161,27 +201,6 @@ class MyApp extends StatelessWidget {
           case '/heatDetection':
             return _buildPageIfAuthorized(
                 userRole, HeatDetectionPage(), settings.arguments);
-          case '/miscarriage':
-            return _buildPageIfAuthorized(
-                userRole, MiscarriagePage(), settings.arguments);
-          case '/naturalInsemination':
-            return _buildPageIfAuthorized(
-                userRole, NaturalInseminationPage(), settings.arguments);
-          case '/pestControl':
-            return _buildPageIfAuthorized(
-                userRole, PestControlPage(), settings.arguments);
-          case '/pregnancy':
-            return _buildPageIfAuthorized(
-                userRole, PregnancyPage(), settings.arguments);
-          case '/treatment':
-            return _buildPageIfAuthorized(
-                userRole, TreatmentPage(), settings.arguments);
-          case '/vaccination':
-            return _buildPageIfAuthorized(
-                userRole, VaccinationPage(), settings.arguments);
-          case '/workerList':
-            return _buildPageIfAuthorized(
-                userRole, WorkerListPage(), settings.arguments);
           case '/workerProfile':
             return _buildWorkerProfilePage(settings);
           case '/editProfile':
@@ -256,6 +275,119 @@ class MyApp extends StatelessWidget {
     );
   }
 
+  MaterialPageRoute _buildAsyncRouteMiscarriages(RouteSettings settings) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+    return MaterialPageRoute(
+      builder: (context) => MiscarriagePage(adminEmailFuture: adminEmailFuture),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRouteNaturalI(RouteSettings settings) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+    return MaterialPageRoute(
+      builder: (context) =>
+          NaturalInseminationPage(adminEmailFuture: adminEmailFuture),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRoutePestControl(RouteSettings settings) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+    return MaterialPageRoute(
+      builder: (context) => PestControlPage(adminEmailFuture: adminEmailFuture),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRoutePregnancy(RouteSettings settings) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+    return MaterialPageRoute(
+      builder: (context) => PregnancyPage(adminEmailFuture: adminEmailFuture),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRouteTreatment(RouteSettings settings) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+    return MaterialPageRoute(
+      builder: (context) => TreatmentPage(adminEmailFuture: adminEmailFuture),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRouteVaccination(RouteSettings settings) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+    return MaterialPageRoute(
+      builder: (context) => VaccinationPage(adminEmailFuture: adminEmailFuture),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRouteMedicine(RouteSettings settings) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+    return MaterialPageRoute(
+      builder: (context) => MedicinePage(adminEmailFuture: adminEmailFuture),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRouteFeeds(BuildContext context) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+    final firestoreServices = Provider.of<FirestoreServices>(context,
+        listen: false); // Use listen: false
+
+    return MaterialPageRoute(
+      builder: (context) => FeedsPage(
+        adminEmailFuture: adminEmailFuture,
+        firestoreServices: firestoreServices,
+      ),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRouteMachinery(BuildContext context) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+
+    return MaterialPageRoute(
+      builder: (context) => FarmMachineryPage(
+        adminEmailFuture: adminEmailFuture,
+      ),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRouteAdminAddWages(BuildContext context) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+
+    return MaterialPageRoute(
+      builder: (context) => AdministrativeWages(
+        adminEmailFuture: adminEmailFuture,
+      ),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRouteInventoryMainPage(BuildContext context) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+
+    return MaterialPageRoute(
+      builder: (context) => InventoryMainPage(
+        adminEmailFuture: adminEmailFuture,
+      ),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRouteEmployeeList(BuildContext context) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+
+    return MaterialPageRoute(
+      builder: (context) => WorkerListPage(
+        adminEmailFuture: adminEmailFuture,
+      ),
+    );
+  }
+  
+   MaterialPageRoute _buildAsyncRouteReports(BuildContext context) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+
+    return MaterialPageRoute(
+      builder: (context) => ReportsPage(
+        adminEmailFuture: adminEmailFuture,
+      ),
+    );
+  }
+
   MaterialPageRoute _buildAsyncRouteForMilkSales(RouteSettings settings) {
     final adminEmailFuture = getAdminEmailFromFirestore();
     return MaterialPageRoute(
@@ -291,11 +423,20 @@ class MyApp extends StatelessWidget {
   MaterialPageRoute _buildWorkerProfilePage(RouteSettings settings) {
     final args = settings.arguments as Map<String, dynamic>? ?? {};
     final workerId = args['workerId'] as String?;
+
     if (workerId == null) {
       return _buildMaterialPageRoute(AuthPage());
     }
+
+    // Assuming you have a method to get the admin email future.
+    Future<String?> adminEmailFuture =
+        getAdminEmailFromFirestore(); // Your method to fetch admin email
+
     return MaterialPageRoute(
-      builder: (context) => WorkerProfilePage(workerId: workerId),
+      builder: (context) => WorkerProfilePage(
+        workerId: workerId,
+        adminEmailFuture: adminEmailFuture, // Pass it here
+      ),
     );
   }
 

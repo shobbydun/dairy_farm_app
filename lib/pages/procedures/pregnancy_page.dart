@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class PregnancyPage extends StatefulWidget {
+  final Future<String?> adminEmailFuture;
+  PregnancyPage({required this.adminEmailFuture});
   @override
   _PregnancyPageState createState() => _PregnancyPageState();
 }
@@ -15,49 +17,93 @@ class _PregnancyPageState extends State<PregnancyPage> {
   String? _editDocId;
   String? _selectedCattleName;
   List<String> _cattleNames = [];
-  late CollectionReference _pregnancyCollection;
+  CollectionReference? _pregnancyCollection; // Change to nullable
+  String? _adminEmail;
 
   @override
   void initState() {
     super.initState();
-    _initializeCollection();
-    _fetchCattleNames();
+    _fetchAdminEmail();
   }
 
-  void _initializeCollection() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      _pregnancyCollection = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('pregnancy_records');
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    print("Admin Email: $_adminEmail"); // Debug print
+    if (_adminEmail != null) {
+      _initializeCollection(); // Initialize the collection
+      await _fetchCattleNames(); // Fetch cattle names after initialization
     } else {
-      _pregnancyCollection = FirebaseFirestore.instance.collection('pregnancy_records');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Admin email not set')),
+      );
     }
   }
 
-Future<void> _fetchCattleNames() async {
-  final uid = FirebaseAuth.instance.currentUser?.uid;
-  QuerySnapshot snapshot;
-
-  if (uid != null) {
-    snapshot = await FirebaseFirestore.instance
-        .collection('cattle')
-        .where('userId', isEqualTo: uid)
-        .get();
-  } else {
-    throw Exception('User not logged in');
+  void _initializeCollection() {
+    setState(() {
+      if (_adminEmail != null) {
+        _pregnancyCollection = FirebaseFirestore.instance
+            .collection('pregnancy_records')
+            .doc(_adminEmail)
+            .collection('entries');
+      } else {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          _pregnancyCollection = FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('pregnancy_records');
+        } else {
+          _pregnancyCollection =
+              FirebaseFirestore.instance.collection('pregnancy_records');
+        }
+      }
+    });
+    print('Initialized Collection for Admin: $_adminEmail');
   }
 
-  setState(() {
-    _cattleNames = snapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>?; 
-      return data?['name'] as String? ?? ''; 
-    }).toList();
-  });
-}
+  Future<void> _fetchCattleNames() async {
+    // Ensure the admin email is set before fetching cattle names
+    if (_adminEmail == null) {
+      throw Exception('Admin email not set');
+    }
 
+    setState(() {
+      _cattleNames = []; // Clear existing cattle names before fetching
+    });
 
+    try {
+      // Fetch cattle names from the correct path in Firestore
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('cattle')
+          .doc(_adminEmail) // Use _adminEmail as the document ID
+          .collection('entries') // Query the entries sub-collection
+          .get();
+
+      setState(() {
+        _cattleNames = snapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>?;
+          return data?['name'] as String? ?? '';
+        }).toList();
+      });
+
+      print('Fetched cattle names: $_cattleNames'); // Debug print
+    } catch (e) {
+      print('Error fetching cattle names: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to fetch cattle names: $e')),
+        );
+      }
+    }
+
+    @override
+    void dispose() {
+      _notesController.dispose();
+      _costController.dispose();
+      super.dispose();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +223,7 @@ Future<void> _fetchCattleNames() async {
             ),
             const SizedBox(height: 8.0),
             StreamBuilder<QuerySnapshot>(
-              stream: _pregnancyCollection.snapshots(),
+              stream: _pregnancyCollection?.snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return Center(child: Text('No Records Found'));
@@ -192,10 +238,14 @@ Future<void> _fetchCattleNames() async {
                       final doc = snapshot.data!.docs[index];
                       final data = doc.data() as Map<String, dynamic>;
                       final cattleName = data['cattle_name'] ?? 'N/A';
-                      final dateOfDetection = (data['date_of_detection'] as Timestamp).toDate();
-                      final expectedDateOfBirth = (data['expected_date_of_birth'] as Timestamp).toDate();
+                      final dateOfDetection =
+                          (data['date_of_detection'] as Timestamp).toDate();
+                      final expectedDateOfBirth =
+                          (data['expected_date_of_birth'] as Timestamp)
+                              .toDate();
 
-                      return _buildRecordCard(doc.id, cattleName, dateOfDetection, expectedDateOfBirth, data);
+                      return _buildRecordCard(doc.id, cattleName,
+                          dateOfDetection, expectedDateOfBirth, data);
                     },
                   ),
                 );
@@ -207,7 +257,12 @@ Future<void> _fetchCattleNames() async {
     );
   }
 
-  Widget _buildRecordCard(String docId, String cattleName, DateTime dateOfDetection, DateTime expectedDateOfBirth, Map<String, dynamic> data) {
+  Widget _buildRecordCard(
+      String docId,
+      String cattleName,
+      DateTime dateOfDetection,
+      DateTime expectedDateOfBirth,
+      Map<String, dynamic> data) {
     return Card(
       color: Colors.white,
       elevation: 4.0,
@@ -225,9 +280,11 @@ Future<void> _fetchCattleNames() async {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 4.0),
-            Text('Date of Conceiving: ${dateOfDetection.toLocal().toString().split(' ')[0]}'),
+            Text(
+                'Date of Conceiving: ${dateOfDetection.toLocal().toString().split(' ')[0]}'),
             SizedBox(height: 4.0),
-            Text('Expected Date of Birth: ${expectedDateOfBirth.toLocal().toString().split(' ')[0]}'),
+            Text(
+                'Expected Date of Birth: ${expectedDateOfBirth.toLocal().toString().split(' ')[0]}'),
             SizedBox(height: 4.0),
             Text('Notes: ${data['notes'] ?? 'N/A'}'),
             SizedBox(height: 4.0),
@@ -258,11 +315,13 @@ Future<void> _fetchCattleNames() async {
     );
   }
 
-  void _showPregnancyModal(BuildContext context, [String? docId, Map<String, dynamic>? data]) {
+  void _showPregnancyModal(BuildContext context,
+      [String? docId, Map<String, dynamic>? data]) {
     if (data != null) {
       _selectedCattleName = data['cattle_name'] ?? '';
       _dateOfDetection = (data['date_of_detection'] as Timestamp).toDate();
-      _expectedDateOfBirth = (data['expected_date_of_birth'] as Timestamp).toDate();
+      _expectedDateOfBirth =
+          (data['expected_date_of_birth'] as Timestamp).toDate();
       _notesController.text = data['notes'] ?? '';
       _costController.text = data['cost'] ?? '';
       _editDocId = docId;
@@ -289,13 +348,15 @@ Future<void> _fetchCattleNames() async {
                     _dateOfDetection = date;
                   });
                 }),
-                _buildDatePickerField(context, 'Expected Date of Birth', (date) {
+                _buildDatePickerField(context, 'Expected Date of Birth',
+                    (date) {
                   setState(() {
                     _expectedDateOfBirth = date;
                   });
                 }),
                 _buildTextField('Notes', TextInputType.text, _notesController),
-                _buildTextField('Cost (if applicable)', TextInputType.number, _costController),
+                _buildTextField('Cost (if applicable)', TextInputType.number,
+                    _costController),
               ],
             ),
           ),
@@ -315,7 +376,7 @@ Future<void> _fetchCattleNames() async {
                     _expectedDateOfBirth != null) {
                   if (docId == null) {
                     // Add new record
-                    await _pregnancyCollection.add({
+                    await _pregnancyCollection?.add({
                       'cattle_name': _selectedCattleName,
                       'date_of_detection': _dateOfDetection,
                       'expected_date_of_birth': _expectedDateOfBirth,
@@ -324,7 +385,7 @@ Future<void> _fetchCattleNames() async {
                     });
                   } else {
                     // Update existing record
-                    await _pregnancyCollection.doc(docId).update({
+                    await _pregnancyCollection?.doc(docId).update({
                       'cattle_name': _selectedCattleName,
                       'date_of_detection': _dateOfDetection,
                       'expected_date_of_birth': _expectedDateOfBirth,
@@ -368,7 +429,8 @@ Future<void> _fetchCattleNames() async {
     );
   }
 
-  Widget _buildTextField(String label, TextInputType inputType, TextEditingController controller) {
+  Widget _buildTextField(
+      String label, TextInputType inputType, TextEditingController controller) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(
@@ -382,7 +444,8 @@ Future<void> _fetchCattleNames() async {
     );
   }
 
-  Widget _buildDatePickerField(BuildContext context, String label, Function(DateTime) onDateSelected) {
+  Widget _buildDatePickerField(
+      BuildContext context, String label, Function(DateTime) onDateSelected) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(
@@ -404,7 +467,13 @@ Future<void> _fetchCattleNames() async {
           }
         },
         controller: TextEditingController(
-          text: (label == 'Expected Date of Birth' ? _expectedDateOfBirth : _dateOfDetection)?.toLocal().toString().split(' ')[0] ?? '',
+          text: (label == 'Expected Date of Birth'
+                      ? _expectedDateOfBirth
+                      : _dateOfDetection)
+                  ?.toLocal()
+                  .toString()
+                  .split(' ')[0] ??
+              '',
         ),
       ),
     );
@@ -425,9 +494,10 @@ Future<void> _fetchCattleNames() async {
               },
             ),
             TextButton(
-              child: Text('Delete', style: TextStyle(color: Colors.lightBlueAccent)),
+              child: Text('Delete',
+                  style: TextStyle(color: Colors.lightBlueAccent)),
               onPressed: () async {
-                await _pregnancyCollection.doc(docId).delete();
+                await _pregnancyCollection?.doc(docId).delete();
                 Navigator.of(context).pop();
               },
             ),

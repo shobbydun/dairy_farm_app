@@ -1,3 +1,4 @@
+import 'package:dairy_harbor/main.dart';
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -33,12 +34,33 @@ class _EditWagePageState extends State<EditWagePage> {
   @override
   void initState() {
     super.initState();
-    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-    _firestoreServices = FirestoreServices(userId); 
+    _initializeFirestoreServices();
     _nameController = TextEditingController(text: widget.employeeName);
     _departmentController = TextEditingController(text: widget.department);
     _dateController = TextEditingController(text: widget.date);
     _wageController = TextEditingController(text: widget.wage);
+  }
+
+  Future<void> _initializeFirestoreServices() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final adminEmailFuture =
+        getAdminEmailFromFirestore(); // Fetch admin email future
+    _firestoreServices = FirestoreServices(userId, adminEmailFuture);
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(), // Ensure the last selectable date is today
+    );
+    if (picked != null) {
+      setState(() {
+        _dateController.text =
+            "${picked.toLocal()}".split(' ')[0]; // Format to 'YYYY-MM-DD'
+      });
+    }
   }
 
   @override
@@ -61,8 +83,8 @@ class _EditWagePageState extends State<EditWagePage> {
 
       try {
         await _firestoreServices.updateWage(widget.docId, updatedWage);
-        
-        // success message
+
+        // Success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Wage record updated successfully.'),
@@ -70,11 +92,11 @@ class _EditWagePageState extends State<EditWagePage> {
             duration: Duration(seconds: 2),
           ),
         );
-        
+
         Navigator.pop(context);
       } catch (e) {
         print('Error updating wage record: $e');
-        
+
         // Show an error message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -103,95 +125,62 @@ class _EditWagePageState extends State<EditWagePage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Employee Name
-                Container(
-                  margin: EdgeInsets.only(bottom: 16),
-                  child: TextFormField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: 'Employee Name',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter the employee name';
-                      }
-                      return null;
-                    },
-                  ),
+                _buildTextField(
+                  controller: _nameController,
+                  labelText: 'Employee Name',
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter the employee name';
+                    }
+                    return null;
+                  },
                 ),
+                const SizedBox(height: 16),
                 // Department
-                Container(
-                  margin: EdgeInsets.only(bottom: 16),
-                  child: TextFormField(
-                    controller: _departmentController,
-                    decoration: InputDecoration(
-                      labelText: 'Department',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter the department';
-                      }
-                      return null;
-                    },
-                  ),
+                _buildTextField(
+                  controller: _departmentController,
+                  labelText: 'Department',
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter the department';
+                    }
+                    return null;
+                  },
                 ),
+                const SizedBox(height: 16),
                 // Date
-                Container(
-                  margin: EdgeInsets.only(bottom: 16),
-                  child: TextFormField(
-                    controller: _dateController,
-                    decoration: InputDecoration(
+                GestureDetector(
+                  // Added GestureDetector for the date field
+                  onTap: () => _selectDate(context),
+                  child: AbsorbPointer(
+                    // Prevents keyboard from popping up
+                    child: _buildTextField(
+                      controller: _dateController,
                       labelText: 'Date',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      keyboardType: TextInputType.datetime,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter the date';
+                        }
+                        return null;
+                      },
                     ),
-                    keyboardType: TextInputType.datetime,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter the date';
-                      }
-                      return null;
-                    },
                   ),
                 ),
+                const SizedBox(height: 16),
                 // Wage
-                Container(
-                  margin: EdgeInsets.only(bottom: 20),
-                  child: TextFormField(
-                    controller: _wageController,
-                    decoration: InputDecoration(
-                      labelText: 'Wage',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter the wage amount';
-                      }
-                      return null;
-                    },
-                  ),
+                _buildTextField(
+                  controller: _wageController,
+                  labelText: 'Wage',
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter the wage amount';
+                    }
+                    return null;
+                  },
                 ),
+                const SizedBox(height: 20),
                 // Save Button
                 ElevatedButton(
                   onPressed: _saveChanges,
@@ -212,6 +201,28 @@ class _EditWagePageState extends State<EditWagePage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String labelText,
+    TextInputType keyboardType = TextInputType.text,
+    required FormFieldValidator<String> validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: labelText,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+      keyboardType: keyboardType,
+      validator: validator,
     );
   }
 }

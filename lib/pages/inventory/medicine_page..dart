@@ -2,55 +2,77 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dairy_harbor/components/inventory_components/add_medicine_page.dart';
 import 'package:dairy_harbor/components/inventory_components/edit_medicine_page.dart';
 import 'package:dairy_harbor/components/inventory_components/medicine_detail_page.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:dairy_harbor/main.dart';
 import 'package:flutter/material.dart';
 
 class MedicinePage extends StatefulWidget {
-  const MedicinePage({super.key});
+  final Future<String?> adminEmailFuture;
+  MedicinePage({super.key, required this.adminEmailFuture});
 
   @override
   _MedicinePageState createState() => _MedicinePageState();
 }
 
 class _MedicinePageState extends State<MedicinePage> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String _userId = FirebaseAuth.instance.currentUser?.uid ?? '';
   String _filterValue = 'Select filter';
   String _searchQuery = '';
   late Stream<QuerySnapshot> _medicinesStream;
   String _sortField = 'addedDate';
   bool _ascending = false;
+  String? _adminEmail;
 
   @override
   void initState() {
     super.initState();
+    _medicinesStream = Stream.empty(); // Initialize to an empty stream
+    _fetchAdminEmail();
+  }
+
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
     _updateStream();
+    setState(() {});
   }
 
   void _updateStream() {
-    Query query =
-        _firestore.collection('medicines').where('userId', isEqualTo: _userId);
+    if (_adminEmail != null) {
+      Query query = FirebaseFirestore.instance
+          .collection('medicines')
+          .doc(_adminEmail)
+          .collection('entries');
+      if (_sortField == 'expiryDate') {
+        query = query.orderBy('expiryDate', descending: _ascending);
+      } else if (_sortField == 'name') {
+        query = query.orderBy('name');
+      } else if (_sortField == 'supplier') {
+        query = query.orderBy('supplier');
+      } else if (_sortField == 'cost') {
+        query = query.orderBy('cost', descending: _ascending);
+      }
 
-    // Sorting
-    if (_sortField == 'expiryDate') {
-      query = query.orderBy('expiryDate', descending: _ascending);
-    } else if (_sortField == 'name') {
-      query = query.orderBy('name');
-    } else if (_sortField == 'supplier') {
-      query = query.orderBy('supplier');
-    } else if (_sortField == 'cost') {
-      query = query.orderBy('cost', descending: _ascending);
+      _medicinesStream = query.snapshots();
+
+      // Log to confirm stream updates
+      _medicinesStream.listen((snapshot) {
+        print("Stream updated: ${snapshot.docs.length} medicines fetched.");
+      });
+
+      setState(() {});
     }
-
-    // Searching
-    _medicinesStream = query.snapshots();
   }
 
   Future<void> _deleteMedicine(String medicineId) async {
-    try {
-      await _firestore.collection('medicines').doc(medicineId).delete();
-    } catch (e) {
-      print('Error deleting medicine: $e');
+    if (_adminEmail != null) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('medicines')
+            .doc(_adminEmail)
+            .collection('entries')
+            .doc(medicineId)
+            .delete();
+      } catch (e) {
+        print('Error deleting medicine: $e');
+      }
     }
   }
 
@@ -111,7 +133,9 @@ class _MedicinePageState extends State<MedicinePage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => AddMedicinePage()),
-              );
+              ).then((_) {
+                _updateStream(); // Refresh data after adding
+              });
             },
           ),
         ],
@@ -295,11 +319,16 @@ class _MedicinePageState extends State<MedicinePage> {
                                 icon:
                                     Icon(Icons.info, color: Colors.blueAccent),
                                 onPressed: () {
+                                  print(
+                                      "Navigating to details for medicine ID: $id");
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) =>
-                                          MedicineDetailPage(medicineId: id),
+                                      builder: (context) => MedicineDetailPage(
+                                          medicineId: id,
+                                          adminEmailFuture:
+                                              getAdminEmailFromFirestore(),
+                                              ),
                                     ),
                                   );
                                 },
@@ -312,7 +341,10 @@ class _MedicinePageState extends State<MedicinePage> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          EditMedicinePage(medicineId: id),
+                                          EditMedicinePage(medicineId: id,
+                                          adminEmailFuture:
+                                              getAdminEmailFromFirestore(),
+                                          ),
                                     ),
                                   );
                                 },

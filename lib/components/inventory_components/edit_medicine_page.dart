@@ -1,11 +1,15 @@
-import 'package:dairy_harbor/services_functions/firestore_services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class EditMedicinePage extends StatefulWidget {
   final String medicineId;
+  final Future<String?> adminEmailFuture;
 
-  const EditMedicinePage({super.key, required this.medicineId});
+  const EditMedicinePage({
+    super.key,
+    required this.medicineId,
+    required this.adminEmailFuture,
+  });
 
   @override
   _EditMedicinePageState createState() => _EditMedicinePageState();
@@ -17,62 +21,75 @@ class _EditMedicinePageState extends State<EditMedicinePage> {
   final TextEditingController _quantityController = TextEditingController();
   final TextEditingController _expiryDateController = TextEditingController();
   final TextEditingController _supplierController = TextEditingController();
-  final TextEditingController _costController = TextEditingController(); 
+  final TextEditingController _costController = TextEditingController();
 
-  late FirestoreServices _firestoreServices;
   Map<String, dynamic>? _medicine;
+  String? _adminEmail;
 
   @override
   void initState() {
     super.initState();
-    _firestoreServices = FirestoreServices(FirebaseAuth.instance.currentUser!.uid);
+    _fetchAdminEmail();
     _fetchMedicineDetails();
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _quantityController.dispose();
-    _expiryDateController.dispose();
-    _supplierController.dispose();
-    _costController.dispose(); 
-    super.dispose();
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    if (_adminEmail != null) {
+      await _fetchMedicineDetails();
+    } else {
+      print("Admin email is null");
+    }
   }
 
   Future<void> _fetchMedicineDetails() async {
-    try {
-      final medicine = await _firestoreServices.getMedicine(widget.medicineId);
-      if (medicine != null) {
-        setState(() {
-          _medicine = medicine;
-          _nameController.text = medicine['name'];
-          _quantityController.text = medicine['quantity'];
-          _expiryDateController.text = medicine['expiryDate'];
-          _supplierController.text = medicine['supplier'];
-          _costController.text = medicine['cost']?.toStringAsFixed(2) ?? '0.00'; 
-        });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Medicine not found'),
-            backgroundColor: Colors.red,
-          ),
-        );
+    if (_adminEmail != null) {
+      try {
+        final medicineDoc = await FirebaseFirestore.instance
+            .collection('medicines')
+            .doc(_adminEmail)
+            .collection('entries')
+            .doc(widget.medicineId)
+            .get();
+
+        if (medicineDoc.exists) {
+          setState(() {
+            _medicine = medicineDoc.data();
+            _nameController.text = _medicine?['name'] ?? '';
+            _quantityController.text = _medicine?['quantity']?.toString() ?? '';
+            _expiryDateController.text = _medicine?['expiryDate'] ?? '';
+            _supplierController.text = _medicine?['supplier'] ?? '';
+            _costController.text =
+                (_medicine?['cost']?.toStringAsFixed(2) ?? '0.00');
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Medicine not found'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        print('Error fetching medicine details: $e');
       }
-    } catch (e) {
-      print('Error fetching medicine details: $e');
     }
   }
 
   Future<void> _saveChanges() async {
     if (_formKey.currentState?.validate() ?? false) {
       try {
-        await _firestoreServices.updateMedicine(widget.medicineId, {
+        await FirebaseFirestore.instance
+            .collection('medicines')
+            .doc(_adminEmail)
+            .collection('entries')
+            .doc(widget.medicineId)
+            .update({
           'name': _nameController.text,
-          'quantity': _quantityController.text,
+          'quantity': int.tryParse(_quantityController.text) ?? 0,
           'expiryDate': _expiryDateController.text,
           'supplier': _supplierController.text,
-          'cost': double.tryParse(_costController.text) ?? 0.0, 
+          'cost': double.tryParse(_costController.text) ?? 0.0,
         });
         Navigator.pop(context);
       } catch (e) {
@@ -92,93 +109,96 @@ class _EditMedicinePageState extends State<EditMedicinePage> {
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildTextField(
-                controller: _nameController,
-                labelText: 'Name',
-                hintText: 'Enter medicine name',
-                icon: Icons.medical_services,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter the medicine name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: _quantityController,
-                labelText: 'Quantity',
-                hintText: 'Enter quantity',
-                icon: Icons.add_box,
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter the quantity';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: _expiryDateController,
-                labelText: 'Expiry Date',
-                hintText: 'YYYY-MM-DD',
-                icon: Icons.calendar_today,
-                keyboardType: TextInputType.datetime,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter the expiry date';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: _supplierController,
-                labelText: 'Supplier',
-                hintText: 'Enter supplier name',
-                icon: Icons.business,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter the supplier';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: _costController,
-                labelText: 'Cost',
-                hintText: 'Enter cost',
-                icon: Icons.money,
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter the cost';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _saveChanges,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: EdgeInsets.symmetric(vertical: 16),
+          child: _medicine == null
+              ? Center(child: CircularProgressIndicator())
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildTextField(
+                      controller: _nameController,
+                      labelText: 'Name',
+                      hintText: 'Enter medicine name',
+                      icon: Icons.medical_services,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter the medicine name';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _quantityController,
+                      labelText: 'Quantity',
+                      hintText: 'Enter quantity',
+                      icon: Icons.add_box,
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter the quantity';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _expiryDateController,
+                      labelText: 'Expiry Date',
+                      hintText: 'YYYY-MM-DD',
+                      icon: Icons.calendar_today,
+                      keyboardType: TextInputType.datetime,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter the expiry date';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _supplierController,
+                      labelText: 'Supplier',
+                      hintText: 'Enter supplier name',
+                      icon: Icons.business,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter the supplier';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _costController,
+                      labelText: 'Cost',
+                      hintText: 'Enter cost',
+                      icon: Icons.money,
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter the cost';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: _saveChanges,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: Text(
+                        'Save Changes',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ),
-                child: Text(
-                  'Save Changes',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

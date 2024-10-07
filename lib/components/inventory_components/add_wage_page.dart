@@ -1,3 +1,4 @@
+import 'package:dairy_harbor/main.dart';
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -14,34 +15,44 @@ class _AddWagePageState extends State<AddWagePage> {
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _wageController = TextEditingController();
 
-  Future<void> _addWage() async {
+  late FirestoreServices _firestoreServices;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeFirestoreServices();
+  }
+
+  Future<void> _initializeFirestoreServices() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final firestoreServices = FirestoreServices(user.uid);
-      try {
-        await firestoreServices.addWage(
-          _nameController.text,
-          _departmentController.text,
-          _dateController.text,
-          _wageController.text,
-        );
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Wage record added'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Error adding wage record: $e',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      final adminEmailFuture = getAdminEmailFromFirestore(); // Fetch admin email future
+      _firestoreServices = FirestoreServices(user.uid, adminEmailFuture);
+    }
+  }
+
+  Future<void> _addWage() async {
+    try {
+      await _firestoreServices.addWage(
+        _nameController.text,
+        _departmentController.text,
+        _dateController.text,
+        _wageController.text,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Wage record added'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error adding wage record: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -193,7 +204,7 @@ class _AddWagePageState extends State<AddWagePage> {
           context: context,
           initialDate: DateTime.now(),
           firstDate: DateTime(2000),
-          lastDate: DateTime(2101),
+          lastDate: DateTime.now(),
         );
         if (pickedDate != null) {
           controller.text = "${pickedDate.toLocal()}".split(' ')[0];

@@ -68,7 +68,7 @@ class AuthPage extends StatelessWidget {
                     print("Admin user detected.");
                     return HomePage(
                       animate: true,
-                      firestoreServices: FirestoreServices(user.uid),
+                      firestoreServices: FirestoreServices(user.uid, adminEmailFuture), // Fixed: pass both arguments
                       user: user,
                       userId: user.uid,
                       adminEmailFuture: adminEmailFuture,

@@ -66,12 +66,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           'id': adminSnapshot.docs.first.id,
           ...adminSnapshot.docs.first.data() as Map<String, dynamic>
         };
-        String farmName = currentAdmin!['farmName'];
+        String admin_email = currentAdmin!['email'];
         AdminDashboardPage.adminEmail = currentAdmin!['email'];
 
         final userCollection = await FirebaseFirestore.instance
             .collection('users')
-            .where('farmName', isEqualTo: farmName)
+            .where('adminEmail', isEqualTo: admin_email)
             .get();
 
         if (mounted) {

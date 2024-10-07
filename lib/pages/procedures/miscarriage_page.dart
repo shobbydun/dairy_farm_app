@@ -3,6 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class MiscarriagePage extends StatefulWidget {
+  final Future<String?> adminEmailFuture;
+
+  MiscarriagePage({required this.adminEmailFuture});
+
   @override
   _MiscarriagePageState createState() => _MiscarriagePageState();
 }
@@ -12,48 +16,87 @@ class _MiscarriagePageState extends State<MiscarriagePage> {
   final _notesController = TextEditingController();
   bool _isFormVisible = false;
   String? _editingRecordId;
-  String? _selectedCattleId; // To hold the selected cattle ID
-  List<String> _cattleList = []; // To hold the cattle names
-
-  late final CollectionReference _miscarriageCollection;
+  String? _selectedCattleId;
+  List<String> _cattleList = [];
+  String? _adminEmail;
+  CollectionReference<Map<String, dynamic>>? _miscarriageCollection;
 
   @override
   void initState() {
     super.initState();
-    _initializeCollection();
-    _fetchCattleNames(); // Fetch cattle names when the page is initialized
+    _fetchAdminEmail();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_adminEmail != null) {
+      _initializeCollection(); // Ensure collection is initialized after admin email is set
+      _fetchCattleNames();
+    }
+  }
+
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    print('Admin Email: $_adminEmail'); // Debugging
+    if (_adminEmail != null) {
+      _initializeCollection();
+      _fetchCattleNames(); // Ensure this is called after the admin email is set
+    } else {
+      print('Failed to fetch admin email.'); // Debugging
+    }
   }
 
   void _initializeCollection() {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('User not logged in.')),
+        const SnackBar(content: Text('User not logged in.')),
       );
       return;
     }
+
     _miscarriageCollection = FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('miscarriage_records');
+        .collection('miscarriage_records')
+        .doc(_adminEmail)
+        .collection('entries');
+
+    _fetchCattleNames(); // Ensure this is called after initialization
   }
 
- void _fetchCattleNames() async {
-  final uid = FirebaseAuth.instance.currentUser?.uid;
-  if (uid == null) {
-    throw Exception('User not logged in');
+  Future<void> _fetchCattleNames() async {
+    if (_adminEmail == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Admin email not set.')),
+      );
+      return;
+    }
+
+    print('Fetching cattle names for admin email: $_adminEmail'); // Debugging
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('cattle')
+          .doc(_adminEmail)
+          .collection('entries')
+          .get();
+
+      print(
+          'Fetched Cattle Names Snapshot: ${snapshot.docs.length}'); // Debugging
+
+      setState(() {
+        _cattleList =
+            snapshot.docs.map((doc) => doc['name'] as String).toList();
+      });
+
+      print('Fetched Cattle Names: $_cattleList'); // Debugging
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load cattle names: $e')),
+      );
+      print('Error fetching cattle names: $e'); // Debugging
+    }
   }
-
-  final snapshot = await FirebaseFirestore.instance
-      .collection('cattle')
-      .where('userId', isEqualTo: uid)
-      .get();
-
-  setState(() {
-    _cattleList = snapshot.docs.map((doc) => doc.data()['name'] as String).toList();
-  });
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +135,9 @@ class _MiscarriagePageState extends State<MiscarriagePage> {
                               ),
                             ),
                             const SizedBox(height: 16.0),
-                            _isFormVisible ? _buildMiscarriageForm() : SizedBox.shrink(),
+                            _isFormVisible
+                                ? _buildMiscarriageForm()
+                                : SizedBox.shrink(),
                           ],
                         ),
                       ),
@@ -150,7 +195,6 @@ class _MiscarriagePageState extends State<MiscarriagePage> {
   Widget _buildMiscarriageForm() {
     return Column(
       children: [
-        // Cattle Selection
         DropdownButtonFormField<String>(
           value: _selectedCattleId,
           hint: Text('Select Cattle'),
@@ -174,33 +218,38 @@ class _MiscarriagePageState extends State<MiscarriagePage> {
         const SizedBox(height: 16.0),
 
         // Date of Miscarriage
-        TextFormField(
-          controller: _dateController,
-          decoration: InputDecoration(
-            labelText: 'Date Of Miscarriage',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            suffixIcon: GestureDetector(
-              onTap: () async {
-                DateTime? pickedDate = await showDatePicker(
-                  context: context,
-                  initialDate: DateTime.now(),
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime(2101),
-                );
-                if (pickedDate != null) {
-                  String formattedDate = '${pickedDate.year.toString().padLeft(4, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}';
-                  setState(() {
-                    _dateController.text = formattedDate;
-                  });
-                }
-              },
-              child: Icon(Icons.calendar_today),
+        GestureDetector(
+          onTap: () async {
+            DateTime? pickedDate = await showDatePicker(
+              context: context,
+              initialDate: DateTime.now(),
+              firstDate: DateTime(2000),
+              lastDate: DateTime.now(), // Set lastDate to now
+            );
+            if (pickedDate != null) {
+              String formattedDate =
+                  '${pickedDate.year.toString().padLeft(4, '0')}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}';
+              setState(() {
+                _dateController.text = formattedDate;
+              });
+            }
+          },
+          child: AbsorbPointer(
+            // Prevent interaction with the TextFormField
+            child: TextFormField(
+              controller: _dateController,
+              decoration: InputDecoration(
+                labelText: 'Date Of Miscarriage',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                suffixIcon: Icon(Icons.calendar_today),
+              ),
+              readOnly: true, // Makes the field read-only
             ),
           ),
-          keyboardType: TextInputType.datetime,
         ),
+
         const SizedBox(height: 16.0),
 
         // Notes
@@ -233,9 +282,18 @@ class _MiscarriagePageState extends State<MiscarriagePage> {
   }
 
   Widget _buildMiscarriageList() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _miscarriageCollection.snapshots(),
+    if (_miscarriageCollection == null) {
+      return Center(
+          child:
+              CircularProgressIndicator()); // Show loading until collection is initialized
+    }
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: _miscarriageCollection!.snapshots(),
       builder: (context, snapshot) {
+        print(
+            'Snapshot Connection State: ${snapshot.connectionState}'); // Debugging
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
         }
@@ -244,7 +302,11 @@ class _MiscarriagePageState extends State<MiscarriagePage> {
           return Center(child: Text('Error: ${snapshot.error}'));
         }
 
-        final records = snapshot.data?.docs ?? [];
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(child: Text('No records found.'));
+        }
+
+        final records = snapshot.data!.docs;
 
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -255,7 +317,7 @@ class _MiscarriagePageState extends State<MiscarriagePage> {
               DataColumn(label: Text('Actions')),
             ],
             rows: records.map((doc) {
-              final data = doc.data() as Map<String, dynamic>;
+              final data = doc.data();
               return DataRow(
                 cells: [
                   DataCell(Text(data['cattleId'] ?? 'N/A')),
@@ -302,7 +364,7 @@ class _MiscarriagePageState extends State<MiscarriagePage> {
     try {
       if (_editingRecordId == null) {
         // Adding a new record
-        await _miscarriageCollection.add({
+        await _miscarriageCollection!.add({
           'cattleId': cattleId,
           'date': date,
           'notes': notes,
@@ -312,7 +374,7 @@ class _MiscarriagePageState extends State<MiscarriagePage> {
         );
       } else {
         // Updating an existing record
-        await _miscarriageCollection.doc(_editingRecordId).update({
+        await _miscarriageCollection!.doc(_editingRecordId).update({
           'cattleId': cattleId,
           'date': date,
           'notes': notes,
@@ -363,7 +425,7 @@ class _MiscarriagePageState extends State<MiscarriagePage> {
 
   void _deleteRecord(String id) async {
     try {
-      await _miscarriageCollection.doc(id).delete();
+      await _miscarriageCollection!.doc(id).delete();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Record deleted successfully')),
       );

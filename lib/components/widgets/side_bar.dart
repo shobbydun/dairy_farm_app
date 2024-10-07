@@ -1,5 +1,3 @@
-import 'package:dairy_harbor/pages/reports/reports_page.dart';
-import 'package:dairy_harbor/pages/workers/worker_list_page.dart';
 import 'package:dairy_harbor/roles_management/AdminDashboardPage.dart';
 import 'package:dairy_harbor/services_functions/auth_service.dart';
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
@@ -149,20 +147,6 @@ class _SidebarMenuState extends State<SidebarMenu> {
                         },
                       ),
                     ],
-                  ),
-                  _buildExpandableMenuItem(
-                    icon: Icons.bar_chart,
-                    text: 'Reports',
-                    isExpanded: false,
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ReportsPage(),
-                        ),
-                      );
-                    },
                   ),
                   _buildExpandableMenuItem(
                     icon: Icons.inventory,
@@ -357,13 +341,8 @@ class _SidebarMenuState extends State<SidebarMenu> {
                         text: 'My Employees',
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  WorkerListPage(), // Navigate to Workers List
-                            ),
-                          );
+
+                          Navigator.pushNamed(context, '/workerList');
                         },
                       ),
                       _buildSubMenuItem(
@@ -379,6 +358,15 @@ class _SidebarMenuState extends State<SidebarMenu> {
                         },
                       ),
                     ],
+                  ),
+                  _buildExpandableMenuItem(
+                    icon: Icons.bar_chart,
+                    text: 'Reports',
+                    isExpanded: false,
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/reports');
+                    },
                   ),
                   const SizedBox(height: 20),
                   _buildAuthSection(),

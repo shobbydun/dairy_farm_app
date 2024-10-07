@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dairy_harbor/main.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -9,14 +10,28 @@ import 'package:image_picker/image_picker.dart';
 import 'worker_profile_page.dart';
 
 class WorkerListPage extends StatefulWidget {
+  final Future<String?> adminEmailFuture;
+
+  WorkerListPage({super.key, required this.adminEmailFuture});
+
   @override
   _WorkerListPageState createState() => _WorkerListPageState();
 }
 
 class _WorkerListPageState extends State<WorkerListPage> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String userId = FirebaseAuth
-      .instance.currentUser!.uid; // Get the authenticated user's ID.
+  final String userId = FirebaseAuth.instance.currentUser!.uid;
+  String? _adminEmail;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAdminEmail();
+  }
+
+  Future<void> _fetchAdminEmail() async {
+    _adminEmail = await widget.adminEmailFuture;
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,12 +39,17 @@ class _WorkerListPageState extends State<WorkerListPage> {
       appBar: AppBar(
         title: Text('My Employees'),
         backgroundColor: Colors.lightBlueAccent,
+        centerTitle: true,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore
-            .collection('workers')
-            .where('userId', isEqualTo: userId)
-            .snapshots(),
+        stream: _adminEmail == null
+            ? null
+            : FirebaseFirestore.instance
+                .collection('workers')
+                .doc(_adminEmail)
+                .collection('entries')
+                .where('userId', isEqualTo: userId)
+                .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -37,8 +57,10 @@ class _WorkerListPageState extends State<WorkerListPage> {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
+
           final workers = snapshot.data?.docs ?? [];
           return ListView.builder(
+            padding: EdgeInsets.symmetric(vertical: 10),
             itemCount: workers.length,
             itemBuilder: (context, index) {
               final worker = workers[index];
@@ -46,28 +68,48 @@ class _WorkerListPageState extends State<WorkerListPage> {
                 margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black26,
                       offset: Offset(0, 2),
-                      blurRadius: 6,
+                      blurRadius: 8,
                     ),
                   ],
                 ),
                 child: ListTile(
+                  contentPadding: EdgeInsets.all(16),
                   leading: CircleAvatar(
-                    backgroundImage: NetworkImage(worker['photoUrl']),
+                    backgroundImage: worker['photoUrl'] != null &&
+                            worker['photoUrl'].isNotEmpty
+                        ? NetworkImage(worker['photoUrl'])
+                        : null, // No background image when using an icon
+                    child: worker['photoUrl'] == null ||
+                            worker['photoUrl'].isEmpty
+                        ? Icon(Icons.person,
+                            size:
+                                40) // Default icon when photoUrl is not available
+                        : null, // No icon if photoUrl is present
                   ),
-                  title: Text(worker['name']),
-                  subtitle:
-                      Text('${worker['role']} - ${worker['phoneNumber']}'),
+                  title: Text(
+                    worker['name'],
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                  subtitle: Text(
+                    '${worker['role']} - ${worker['phoneNumber']}',
+                    style: TextStyle(color: Colors.grey[700]),
+                  ),
                   onTap: () {
+                    Future<String?> adminEmailFuture =
+                        getAdminEmailFromFirestore(); // Your method to fetch admin email
+
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            WorkerProfilePage(workerId: worker.id),
+                        builder: (context) => WorkerProfilePage(
+                          workerId: worker.id,
+                          adminEmailFuture: adminEmailFuture,
+                        ),
                       ),
                     );
                   },
@@ -77,26 +119,35 @@ class _WorkerListPageState extends State<WorkerListPage> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => AddWorkerPage()),
-          );
-        },
-        child: Icon(Icons.add),
-      ),
+      floatingActionButton: _adminEmail == null
+          ? null
+          : FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        AddWorkerPage(adminEmail: _adminEmail!),
+                  ),
+                );
+              },
+              child: Icon(Icons.add),
+              backgroundColor: Colors.lightBlueAccent,
+            ),
     );
   }
 }
 
 class AddWorkerPage extends StatefulWidget {
+  final String adminEmail;
+  //final Future<String?> adminEmailFuture;
+  AddWorkerPage({super.key, required this.adminEmail});
   @override
   _AddWorkerPageState createState() => _AddWorkerPageState();
 }
 
 class _AddWorkerPageState extends State<AddWorkerPage> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  //final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final ImagePicker _picker = ImagePicker();
   File? _image;
   final _formKey = GlobalKey<FormState>();
@@ -107,6 +158,18 @@ class _AddWorkerPageState extends State<AddWorkerPage> {
   String role = '';
   bool _isLoading = false;
   String? _successMessage;
+  String? _adminEmail;
+
+  @override
+  void initState() {
+    super.initState();
+    _adminEmail = widget.adminEmail; // Assign it here
+  }
+
+  // Future<void> _fetchAdminEmail() async {
+  //   _adminEmail = await widget.adminEmailFuture;
+  //   setState(() {});
+  // }
 
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
@@ -138,26 +201,78 @@ class _AddWorkerPageState extends State<AddWorkerPage> {
       final photoUrl = await _uploadImage();
       final userId = FirebaseAuth.instance.currentUser!.uid;
 
-      await _firestore.collection('workers').add({
+      if (_adminEmail != null) {
+        await FirebaseFirestore.instance
+            .collection('workers') // Adjust collection name as necessary
+            .doc(_adminEmail) // Use the admin's document
+            .collection('entries') // Adjust collection name as necessary
+            .add({
+          'name': name,
+          'emailAddress': emailAddress,
+          'phoneNumber': phoneNumber,
+          'address': address,
+          'role': role,
+          'photoUrl': photoUrl ?? '',
+          'userId': userId,
+        });
+
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _successMessage = 'Employee saved successfully!';
+          });
+          Navigator.pop(context);
+        }
+      }
+    }
+  }
+
+  Future<void> _updateWorker(String docId) async {
+    if (_adminEmail != null) {
+      await FirebaseFirestore.instance
+          .collection('workers') // Adjust collection name as necessary
+          .doc(_adminEmail)
+          .collection('entries') // Adjust collection name as necessary
+          .doc(docId)
+          .update({
         'name': name,
         'emailAddress': emailAddress,
         'phoneNumber': phoneNumber,
         'address': address,
         'role': role,
-        'photoUrl': photoUrl ?? '',
-        'userId': userId,
+        'photoUrl': await _uploadImage() ?? '',
       });
+    }
+  }
 
-      if (mounted) {
-        // Check if the widget is still mounted
-        setState(() {
-          _isLoading = false;
-          _successMessage = 'Employee saved successfully!';
-        });
+  Future<void> _deleteWorker(String docId) async {
+    bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Confirm Deletion'),
+          content: const Text('Are you sure you want to delete this worker?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
 
-        // Pop back to the previous page after success
-        Navigator.pop(context);
-      }
+    if (confirmed == true) {
+      await FirebaseFirestore.instance
+          .collection('workers') // Adjust collection name as necessary
+          .doc(_adminEmail)
+          .collection('entries') // Adjust collection name as necessary
+          .doc(docId)
+          .delete();
     }
   }
 
