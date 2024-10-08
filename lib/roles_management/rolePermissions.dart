@@ -8,10 +8,9 @@ const Map<String, List<String>> rolePermissions = {
   '/feeds': ['admin', 'manager', 'staff'],
   '/inventory': ['admin', 'manager', 'staff'],
   '/medicine': ['admin', 'manager', 'veterinarian'],
-  '/notification': ['admin', 'manager', 'staff'],
-  '/userProfile': ['admin', 'manager', 'staff'],
+  //'/notification': ['admin', 'manager', 'staff'],
   '/workerList': ['admin', 'manager'],
-  '/workerProfile': ['admin', 'manager', 'hr'],
+  //'/workerProfile': ['admin', 'manager', 'hr'],
   
   '/cattleForm': ['admin', 'manager', 'staff'],
 };

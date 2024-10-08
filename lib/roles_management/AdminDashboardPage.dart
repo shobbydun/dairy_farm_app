@@ -53,52 +53,65 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     fetchUsers();
   }
 
-  Future<void> fetchUsers() async {
-    try {
-      final adminSnapshot = await FirebaseFirestore.instance
+Future<void> fetchUsers() async {
+  try {
+    final adminSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'admin')
+        .limit(1)
+        .get();
+
+    if (adminSnapshot.docs.isNotEmpty) {
+      currentAdmin = {
+        'id': adminSnapshot.docs.first.id,
+        ...adminSnapshot.docs.first.data() as Map<String, dynamic>
+      };
+
+      // Fetch users based on both farmName and adminEmail
+      String adminFarmName = currentAdmin!['farmName'];
+      String adminEmail = currentAdmin!['email'];
+      AdminDashboardPage.adminEmail = adminEmail;
+
+      // Fetch users by farmName
+      final farmUsersCollection = await FirebaseFirestore.instance
           .collection('users')
-          .where('role', isEqualTo: 'admin')
-          .limit(1)
+          .where('farmName', isEqualTo: adminFarmName)
           .get();
 
-      if (adminSnapshot.docs.isNotEmpty) {
-        currentAdmin = {
-          'id': adminSnapshot.docs.first.id,
-          ...adminSnapshot.docs.first.data() as Map<String, dynamic>
-        };
-        String admin_email = currentAdmin!['email'];
-        AdminDashboardPage.adminEmail = currentAdmin!['email'];
+      // Fetch users by adminEmail
+      final adminUsersCollection = await FirebaseFirestore.instance
+          .collection('users')
+          .where('adminEmail', isEqualTo: adminEmail)
+          .get();
 
-        final userCollection = await FirebaseFirestore.instance
-            .collection('users')
-            .where('adminEmail', isEqualTo: admin_email)
-            .get();
+      // Combine the results
+      final allUsersDocs = {...farmUsersCollection.docs, ...adminUsersCollection.docs};
 
-        if (mounted) {
-          setState(() {
-            users = userCollection.docs.map((doc) {
-              return {'id': doc.id, ...doc.data() as Map<String, dynamic>};
-            }).toList();
-            users.removeWhere((user) => user['id'] == currentAdmin!['id']);
-            isLoading = false;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            isLoading = false;
-          });
-        }
+      if (mounted) {
+        setState(() {
+          users = allUsersDocs.map((doc) {
+            return {'id': doc.id, ...doc.data() as Map<String, dynamic>};
+          }).toList();
+          users.removeWhere((user) => user['id'] == currentAdmin!['id']);
+          isLoading = false;
+        });
       }
-    } catch (e) {
+    } else {
       if (mounted) {
         setState(() {
           isLoading = false;
         });
       }
-      print("Error fetching users: $e");
     }
+  } catch (e) {
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
+    }
+    print("Error fetching users: $e");
   }
+}
 
   Future<void> updateUserRole(String userId, String newRole) async {
     try {

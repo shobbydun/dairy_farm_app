@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dairy_harbor/main.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -36,8 +35,6 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
 
   Future<void> _fetchWorker() async {
     try {
-      final userId = FirebaseAuth.instance.currentUser!.uid;
-
       worker = await _firestore
           .collection('workers')
           .doc(adminEmail)
@@ -45,26 +42,14 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
           .doc(widget.workerId)
           .get();
 
-      if (!worker!.exists) {
-        _showError('Worker not found.');
-        return;
-      }
-
-      if (worker?['userId'] == userId) {
+      if (worker!.exists) {
         setState(() {});
       } else {
-        _showUnauthorizedAccess();
+        _showError('Worker not found.');
       }
     } catch (error) {
       _showError(error.toString());
     }
-  }
-
-  void _showUnauthorizedAccess() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Unauthorized access!')),
-    );
-    Navigator.pop(context);
   }
 
   void _showError(String message) {
@@ -164,7 +149,14 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundImage: NetworkImage(worker!['photoUrl']),
+                        backgroundImage: worker!['photoUrl'] != null &&
+                                worker!['photoUrl']!.isNotEmpty
+                            ? NetworkImage(worker!['photoUrl'])
+                            : null,
+                        child: worker!['photoUrl'] == null ||
+                                worker!['photoUrl']!.isEmpty
+                            ? Icon(Icons.person, size: 50, color: Colors.grey)
+                            : null,
                       ),
                       SizedBox(height: 20),
                       Text(
@@ -211,7 +203,7 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
                 ),
               ),
             ),
-            SizedBox(width: 16), // Space between card and right section
+            SizedBox(width: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -230,24 +222,6 @@ class _WorkerProfilePageState extends State<WorkerProfilePage> {
                   ),
                   padding: const EdgeInsets.all(16.0),
                   margin: const EdgeInsets.only(top: 20),
-                  // child: Column(
-                  //   crossAxisAlignment: CrossAxisAlignment.start,
-                  //   children: [
-                  //     Text(
-                  //       'Statistics',
-                  //       style: TextStyle(
-                  //           fontSize: 20, fontWeight: FontWeight.bold),
-                  //     ),
-                  //     SizedBox(height: 10),
-                  //     // Dummy Data
-                  //     Text('Total Hours Worked: 150',
-                  //         style: TextStyle(fontSize: 16)),
-                  //     Text('Projects Completed: 10',
-                  //         style: TextStyle(fontSize: 16)),
-                  //     Text('Client Rating: 4.5/5',
-                  //         style: TextStyle(fontSize: 16)),
-                  //   ],
-                  // ),
                 ),
                 SizedBox(height: 20), // Space between sections
                 // Contact Section
@@ -332,10 +306,11 @@ class EditWorkerPage extends StatefulWidget {
   final Future<void> Function() onWorkerUpdated;
   final Future<String?> adminEmailFuture;
 
-  EditWorkerPage(
-      {required this.workerId,
-      required this.onWorkerUpdated,
-      required this.adminEmailFuture});
+  EditWorkerPage({
+    required this.workerId,
+    required this.onWorkerUpdated,
+    required this.adminEmailFuture,
+  });
 
   @override
   _EditWorkerPageState createState() => _EditWorkerPageState();
@@ -346,9 +321,17 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
   final ImagePicker _picker = ImagePicker();
   File? _image;
   final _formKey = GlobalKey<FormState>();
-  String? name, email, phone, address, role;
+
+  // Create controllers
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController addressController = TextEditingController();
+  final TextEditingController roleController = TextEditingController();
+
   DocumentSnapshot? worker;
   String? adminEmail;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -370,31 +353,20 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
           .doc(widget.workerId)
           .get();
 
-      if (worker!.exists) {
-        if (worker!['userId'] == FirebaseAuth.instance.currentUser!.uid) {
-          setState(() {
-            name = worker!['name'];
-            email = worker!['emailAddress'];
-            phone = worker!['phoneNumber'];
-            address = worker!['address'];
-            role = worker!['role'];
-          });
-        } else {
-          _showUnauthorizedAccess();
-        }
+      if (worker != null && worker!.exists) {
+        // Populate the controllers with existing data
+        nameController.text = worker!['name'];
+        emailController.text = worker!['emailAddress'];
+        phoneController.text = worker!['phoneNumber'];
+        addressController.text = worker!['address'];
+        roleController.text = worker!['role'];
+        setState(() {}); // Update UI
       } else {
         _showError('Worker not found.');
       }
     } catch (error) {
       _showError(error.toString());
     }
-  }
-
-  void _showUnauthorizedAccess() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Unauthorized access!')),
-    );
-    Navigator.pop(context);
   }
 
   void _showError(String message) {
@@ -420,50 +392,72 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
       await ref.putFile(_image!);
       return await ref.getDownloadURL();
     }
-    return worker!['photoUrl'];
+    return worker?['photoUrl'];
   }
 
   Future<void> _updateWorker() async {
     if (_formKey.currentState!.validate()) {
-      String? photoUrl = await _uploadImage();
-
-      await _firestore
-          .collection('workers')
-          .doc(adminEmail)
-          .collection('entries')
-          .doc(widget.workerId)
-          .update({
-        'name': name,
-        'emailAddress': email,
-        'phoneNumber': phone,
-        'address': address,
-        'role': role,
-        'photoUrl': photoUrl,
+      setState(() {
+        _isLoading = true; // Start loading
       });
 
-      await widget.onWorkerUpdated();
-      Navigator.pop(context);
+      try {
+        String? photoUrl = await _uploadImage();
+
+        await _firestore
+            .collection('workers')
+            .doc(adminEmail)
+            .collection('entries')
+            .doc(widget.workerId)
+            .update({
+          'name': nameController.text,
+          'emailAddress': emailController.text,
+          'phoneNumber': phoneController.text,
+          'address': addressController.text,
+          'role': roleController.text,
+          'photoUrl': photoUrl,
+        });
+
+        await widget.onWorkerUpdated();
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Employee updated successfully!')),
+        );
+
+        // Check if the widget is still mounted before popping
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      } catch (error) {
+        _showError(error.toString());
+      } finally {
+        setState(() {
+          _isLoading = false; // Stop loading
+        });
+      }
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    if (worker == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('Loading...'),
-        ),
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+  void dispose() {
+    // Dispose controllers
+    nameController.dispose();
+    emailController.dispose();
+    phoneController.dispose();
+    addressController.dispose();
+    roleController.dispose();
+    super.dispose();
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Edit Employee'),
         backgroundColor: Colors.lightBlueAccent,
       ),
       body: SingleChildScrollView(
-        // Make the page scrollable
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
@@ -475,29 +469,31 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
                   radius: 50,
                   backgroundImage: _image != null
                       ? FileImage(_image!)
-                      : NetworkImage(worker!['photoUrl']),
+                      : worker != null && worker!['photoUrl'] != null
+                          ? NetworkImage(worker!['photoUrl'])
+                          : null,
                   child: _image == null
                       ? Icon(Icons.add_a_photo, size: 30, color: Colors.grey)
                       : null,
                 ),
               ),
               SizedBox(height: 20),
-              _buildTextFormField('Name', name, (value) => name = value),
+              _buildTextFormField('Name', nameController),
               SizedBox(height: 10),
-              _buildTextFormField('Email', email, (value) => email = value),
+              _buildTextFormField('Email', emailController),
               SizedBox(height: 10),
-              _buildTextFormField(
-                  'Phone Number', phone, (value) => phone = value),
+              _buildTextFormField('Phone Number', phoneController),
               SizedBox(height: 10),
-              _buildTextFormField(
-                  'Address', address, (value) => address = value),
+              _buildTextFormField('Address', addressController),
               SizedBox(height: 10),
-              _buildTextFormField('Role', role, (value) => role = value),
+              _buildTextFormField('Role', roleController),
               SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _updateWorker,
-                child: Text('Update Employee'),
-              ),
+              _isLoading // Show loading indicator
+                  ? CircularProgressIndicator()
+                  : ElevatedButton(
+                      onPressed: _updateWorker,
+                      child: Text('Update Employee'),
+                    ),
             ],
           ),
         ),
@@ -505,10 +501,9 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
     );
   }
 
-  Widget _buildTextFormField(
-      String label, String? initialValue, ValueChanged<String> onChanged) {
+  Widget _buildTextFormField(String label, TextEditingController controller) {
     return TextFormField(
-      initialValue: initialValue,
+      controller: controller,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(
@@ -517,7 +512,6 @@ class _EditWorkerPageState extends State<EditWorkerPage> {
         filled: true,
         fillColor: Colors.grey[200],
       ),
-      onChanged: onChanged,
       validator: (value) => value!.isEmpty ? 'Please enter a $label' : null,
     );
   }

@@ -1,5 +1,6 @@
 import 'package:dairy_harbor/roles_management/roleAuthService.dart';
 import 'package:dairy_harbor/roles_management/rolePermissions.dart';
+import 'package:dairy_harbor/roles_management/role_profile_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -7,13 +8,21 @@ class DynamicRoleHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String userId = FirebaseAuth.instance.currentUser!.uid;
-    String userEmail = FirebaseAuth.instance.currentUser!.email ?? 'user@example.com';
 
     return Scaffold(
       appBar: AppBar(
         title: Text('Home'),
         backgroundColor: Colors.blueAccent,
         actions: [
+          IconButton(
+            icon: Icon(Icons.person), // Profile icon
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => RoleProfilePage()),
+              );
+            },
+          ),
           IconButton(
             icon: Icon(Icons.logout),
             onPressed: () => _confirmLogout(context),
@@ -32,18 +41,26 @@ class DynamicRoleHome extends StatelessWidget {
           }
 
           String userRole = snapshot.data ?? 'guest';
-          String initials = _getInitials(userEmail);
-          String greeting = _getGreeting();
+          return FutureBuilder<String>(
+            future: RoleAuthService().getUsername(userId),
+            builder: (context, usernameSnapshot) {
+              if (usernameSnapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              }
 
-          return _buildRoleFeatures(userRole, context, initials, greeting);
+              if (usernameSnapshot.hasError) {
+                return Center(child: Text('Error retrieving username: ${usernameSnapshot.error}'));
+              }
+
+              String username = usernameSnapshot.data ?? 'User';
+              String greeting = _getGreeting();
+
+              return _buildRoleFeatures(userRole, context, username, greeting);
+            },
+          );
         },
       ),
     );
-  }
-
-  String _getInitials(String email) {
-    List<String> parts = email.split('@')[0].split('.');
-    return parts.map((part) => part[0].toUpperCase()).join();
   }
 
   String _getGreeting() {
@@ -57,7 +74,7 @@ class DynamicRoleHome extends StatelessWidget {
     }
   }
 
-  Widget _buildRoleFeatures(String role, BuildContext context, String initials, String greeting) {
+  Widget _buildRoleFeatures(String role, BuildContext context, String username, String greeting) {
     List<Widget> features = _getFeaturesForRole(role, context);
 
     return Padding(
@@ -66,7 +83,7 @@ class DynamicRoleHome extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$greeting, $initials!',
+            '$greeting, $username!',
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.blueGrey),
           ),
           SizedBox(height: 16),

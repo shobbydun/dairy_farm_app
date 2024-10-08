@@ -48,7 +48,6 @@ class _WorkerListPageState extends State<WorkerListPage> {
                 .collection('workers')
                 .doc(_adminEmail)
                 .collection('entries')
-                .where('userId', isEqualTo: userId)
                 .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -80,16 +79,15 @@ class _WorkerListPageState extends State<WorkerListPage> {
                 child: ListTile(
                   contentPadding: EdgeInsets.all(16),
                   leading: CircleAvatar(
+                    
                     backgroundImage: worker['photoUrl'] != null &&
                             worker['photoUrl'].isNotEmpty
                         ? NetworkImage(worker['photoUrl'])
-                        : null, // No background image when using an icon
-                    child: worker['photoUrl'] == null ||
-                            worker['photoUrl'].isEmpty
-                        ? Icon(Icons.person,
-                            size:
-                                40) // Default icon when photoUrl is not available
-                        : null, // No icon if photoUrl is present
+                        : null,
+                    child:
+                        worker['photoUrl'] == null || worker['photoUrl'].isEmpty
+                            ? Icon(Icons.person, size: 40, color: Colors.grey)
+                            : null,
                   ),
                   title: Text(
                     worker['name'],
@@ -101,7 +99,7 @@ class _WorkerListPageState extends State<WorkerListPage> {
                   ),
                   onTap: () {
                     Future<String?> adminEmailFuture =
-                        getAdminEmailFromFirestore(); // Your method to fetch admin email
+                        getAdminEmailFromFirestore();
 
                     Navigator.push(
                       context,
@@ -195,7 +193,7 @@ class _AddWorkerPageState extends State<AddWorkerPage> {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
-        _successMessage = null; // Reset success message
+        _successMessage = null; 
       });
 
       final photoUrl = await _uploadImage();
@@ -203,9 +201,9 @@ class _AddWorkerPageState extends State<AddWorkerPage> {
 
       if (_adminEmail != null) {
         await FirebaseFirestore.instance
-            .collection('workers') // Adjust collection name as necessary
-            .doc(_adminEmail) // Use the admin's document
-            .collection('entries') // Adjust collection name as necessary
+            .collection('workers') 
+            .doc(_adminEmail) 
+            .collection('entries')
             .add({
           'name': name,
           'emailAddress': emailAddress,
@@ -230,9 +228,9 @@ class _AddWorkerPageState extends State<AddWorkerPage> {
   Future<void> _updateWorker(String docId) async {
     if (_adminEmail != null) {
       await FirebaseFirestore.instance
-          .collection('workers') // Adjust collection name as necessary
+          .collection('workers') 
           .doc(_adminEmail)
-          .collection('entries') // Adjust collection name as necessary
+          .collection('entries')
           .doc(docId)
           .update({
         'name': name,
@@ -268,9 +266,9 @@ class _AddWorkerPageState extends State<AddWorkerPage> {
 
     if (confirmed == true) {
       await FirebaseFirestore.instance
-          .collection('workers') // Adjust collection name as necessary
+          .collection('workers') 
           .doc(_adminEmail)
-          .collection('entries') // Adjust collection name as necessary
+          .collection('entries')
           .doc(docId)
           .delete();
     }

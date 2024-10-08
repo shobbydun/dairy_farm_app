@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:dairy_harbor/services_functions/firestore_services.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -38,7 +37,12 @@ class UserProfile extends StatelessWidget {
                   IconButton(
                     icon: Icon(Icons.edit, color: Colors.white),
                     onPressed: () {
-                      Navigator.pushNamed(context, '/editProfile');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => EditProfilePage(),
+                        ),
+                      );
                     },
                   ),
                 ],
@@ -71,7 +75,8 @@ class UserProfile extends StatelessWidget {
                                   ? NetworkImage(profileImageUrl)
                                   : null,
                               child: profileImageUrl == null
-                                  ? Icon(Icons.person, size: 60, color: Colors.white)
+                                  ? Icon(Icons.person,
+                                      size: 60, color: Colors.white)
                                   : null,
                             ),
                           ),
@@ -172,21 +177,20 @@ class UserProfile extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          ...content.map((line) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4.0),
-            child: Text(
-              line,
-              style: TextStyle(fontSize: 16),
-            ),
-          )).toList(),
+          ...content
+              .map((line) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: Text(
+                      line,
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ))
+              .toList(),
         ],
       ),
     );
   }
 }
-
-
-
 
 class EditProfilePage extends StatefulWidget {
   @override
@@ -195,9 +199,7 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _fullNameController;
-  late TextEditingController _emailController;
   late TextEditingController _phoneController;
-  late TextEditingController _farmNameController;
   late TextEditingController _farmLocationController;
   late TextEditingController _farmSizeController;
   late TextEditingController _numberOfCowsController;
@@ -212,9 +214,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.initState();
 
     _fullNameController = TextEditingController();
-    _emailController = TextEditingController();
     _phoneController = TextEditingController();
-    _farmNameController = TextEditingController();
     _farmLocationController = TextEditingController();
     _farmSizeController = TextEditingController();
     _numberOfCowsController = TextEditingController();
@@ -230,26 +230,25 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Future<void> _loadProfile() async {
-    final firestoreService = Provider.of<FirestoreServices>(context, listen: false);
+    final firestoreService =
+        Provider.of<FirestoreServices>(context, listen: false);
 
     try {
       final profile = await firestoreService.getProfile();
       if (mounted) {
         setState(() {
           _fullNameController.text = profile?['fullName'] ?? '';
-          _emailController.text = profile?['email'] ?? '';
           _phoneController.text = profile?['phone'] ?? '';
-          _farmNameController.text = profile?['farmName'] ?? '';
           _farmLocationController.text = profile?['farmLocation'] ?? '';
           _farmSizeController.text = profile?['farmSize'] ?? '';
           _numberOfCowsController.text = profile?['numberOfCows'] ?? '';
-          _dailyMilkProductionController.text = profile?['dailyMilkProduction'] ?? '';
+          _dailyMilkProductionController.text =
+              profile?['dailyMilkProduction'] ?? '';
           _milkSoldController.text = profile?['milkSold'] ?? '';
           _milkQualityController.text = profile?['milkQuality'] ?? '';
         });
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<void> _pickImage() async {
@@ -280,16 +279,24 @@ class _EditProfilePageState extends State<EditProfilePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildTextField(controller: _fullNameController, label: 'Full Name'),
-              _buildTextField(controller: _emailController, label: 'Email'),
+              _buildTextField(
+                  controller: _fullNameController, label: 'Full Name'),
+              //_buildTextField(controller: _emailController, label: 'Email'),
               _buildTextField(controller: _phoneController, label: 'Phone'),
-              _buildTextField(controller: _farmNameController, label: 'Farm Name'),
-              _buildTextField(controller: _farmLocationController, label: 'Farm Location'),
-              _buildTextField(controller: _farmSizeController, label: 'Farm Size'),
-              _buildTextField(controller: _numberOfCowsController, label: 'Number of Cows'),
-              _buildTextField(controller: _dailyMilkProductionController, label: 'Daily Milk Production'),
-              _buildTextField(controller: _milkSoldController, label: 'Milk Sold'),
-              _buildTextField(controller: _milkQualityController, label: 'Milk Quality'),
+
+              _buildTextField(
+                  controller: _farmLocationController, label: 'Farm Location'),
+              _buildTextField(
+                  controller: _farmSizeController, label: 'Farm Size'),
+              _buildTextField(
+                  controller: _numberOfCowsController, label: 'Number of Cows'),
+              _buildTextField(
+                  controller: _dailyMilkProductionController,
+                  label: 'Daily Milk Production'),
+              _buildTextField(
+                  controller: _milkSoldController, label: 'Milk Sold'),
+              _buildTextField(
+                  controller: _milkQualityController, label: 'Milk Quality'),
               const SizedBox(height: 20),
               _profileImage != null
                   ? Image.file(_profileImage!)
@@ -300,54 +307,58 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: _isSaving ? null : () async {
-                  setState(() {
-                    _isSaving = true; 
-                  });
+                onPressed: _isSaving
+                    ? null
+                    : () async {
+                        setState(() {
+                          _isSaving = true;
+                        });
 
-                  try {
-                    final profileData = {
-                      'fullName': _fullNameController.text,
-                      'email': _emailController.text,
-                      'phone': _phoneController.text,
-                      'farmName': _farmNameController.text,
-                      'farmLocation': _farmLocationController.text,
-                      'farmSize': _farmSizeController.text,
-                      'numberOfCows': _numberOfCowsController.text,
-                      'dailyMilkProduction': _dailyMilkProductionController.text,
-                      'milkSold': _milkSoldController.text,
-                      'milkQuality': _milkQualityController.text,
-                    };
-                    await firestoreService.updateProfile(profileData);
+                        try {
+                          final profileData = {
+                            'fullName': _fullNameController.text,
+                            'phone': _phoneController.text,
+                            'farmLocation': _farmLocationController.text,
+                            'farmSize': _farmSizeController.text,
+                            'numberOfCows': _numberOfCowsController.text,
+                            'dailyMilkProduction':
+                                _dailyMilkProductionController.text,
+                            'milkSold': _milkSoldController.text,
+                            'milkQuality': _milkQualityController.text,
+                          };
+                          await firestoreService.updateProfile(profileData);
 
-                    if (_profileImage != null) {
-                      final imageUrl = await firestoreService.uploadProfileImage(_profileImage!);
-                      if (imageUrl != null) {
-                        await firestoreService.updateProfileImageUrl(imageUrl);
-                      }
-                    }
+                          if (_profileImage != null) {
+                            final imageUrl = await firestoreService
+                                .uploadProfileImage(_profileImage!);
+                            if (imageUrl != null) {
+                              await firestoreService
+                                  .updateProfileImageUrl(imageUrl);
+                            }
+                          }
 
-                    // Show success message
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Profile saved successfully!')),
-                    );
-                    
-                    // Go back to the previous page
-                    Navigator.pop(context);
-                  } catch (e) {
-                    // Show error message
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error saving profile: $e')),
-                    );
-                  } finally {
-                    // End saving
-                    if (mounted) {
-                      setState(() {
-                        _isSaving = false;
-                      });
-                    }
-                  }
-                },
+                          // Show success message
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text('Profile saved successfully!')),
+                          );
+
+                          // Go back to the previous page
+                          Navigator.pop(context);
+                        } catch (e) {
+                          // Show error message
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error saving profile: $e')),
+                          );
+                        } finally {
+                          // End saving
+                          if (mounted) {
+                            setState(() {
+                              _isSaving = false;
+                            });
+                          }
+                        }
+                      },
                 child: _isSaving
                     ? CircularProgressIndicator() // Show progress indicator while saving
                     : Text('Save'),
@@ -359,7 +370,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  Widget _buildTextField({required TextEditingController controller, required String label}) {
+  Widget _buildTextField(
+      {required TextEditingController controller, required String label}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(
@@ -375,9 +387,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void dispose() {
     _fullNameController.dispose();
-    _emailController.dispose();
     _phoneController.dispose();
-    _farmNameController.dispose();
     _farmLocationController.dispose();
     _farmSizeController.dispose();
     _numberOfCowsController.dispose();

@@ -18,10 +18,6 @@ class CustomNavbar extends StatelessWidget implements PreferredSizeWidget {
       ),
       title: const Text('Dashboard'),
       actions: [
-        IconButton(
-          icon: const Icon(Icons.search),
-          onPressed: () {},
-        ),
         PopupMenuButton(
           icon: Icon(Icons.person_3),
           itemBuilder: (context) => [

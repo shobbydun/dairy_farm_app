@@ -179,9 +179,12 @@ class MyApp extends StatelessWidget {
 
           case '/workerList':
             return _buildAsyncRouteEmployeeList(context);
-            case '/reports':
+          case '/reports':
             return _buildAsyncRouteReports(context);
-            
+
+          case '/heatDetection':
+            return _buildAsyncRouteHeatDetection(context);
+
           case '/notification':
             return _buildPageIfAuthorized(
                 userRole, NotificationScreen(), settings.arguments);
@@ -198,9 +201,6 @@ class MyApp extends StatelessWidget {
             return _buildMaterialPageRoute(AuthPage());
           case '/dynamic_role_home':
             return _buildMaterialPageRoute(DynamicRoleHome());
-          case '/heatDetection':
-            return _buildPageIfAuthorized(
-                userRole, HeatDetectionPage(), settings.arguments);
           case '/workerProfile':
             return _buildWorkerProfilePage(settings);
           case '/editProfile':
@@ -377,12 +377,22 @@ class MyApp extends StatelessWidget {
       ),
     );
   }
-  
-   MaterialPageRoute _buildAsyncRouteReports(BuildContext context) {
+
+  MaterialPageRoute _buildAsyncRouteReports(BuildContext context) {
     final adminEmailFuture = getAdminEmailFromFirestore();
 
     return MaterialPageRoute(
       builder: (context) => ReportsPage(
+        adminEmailFuture: adminEmailFuture,
+      ),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRouteHeatDetection(BuildContext context) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+
+    return MaterialPageRoute(
+      builder: (context) => HeatDetectionPage(
         adminEmailFuture: adminEmailFuture,
       ),
     );
