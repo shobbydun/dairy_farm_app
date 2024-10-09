@@ -1,5 +1,6 @@
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dairy_harbor/components/widgets/line_chart.dart';
 import 'package:dairy_harbor/components/widgets/my_app_bar.dart';
 import 'package:dairy_harbor/components/widgets/my_card.dart';
 import 'package:dairy_harbor/components/widgets/side_bar.dart';
@@ -82,6 +83,7 @@ class _HomePageState extends State<HomePage> {
         await _fetchData();
         await _fetchWeeklyExpenses();
         await _fetchSummaryData();
+        await _loadData();
       } else {
         print('Admin email is null, skipping data fetches.');
       }
@@ -95,6 +97,46 @@ class _HomePageState extends State<HomePage> {
       }
     }
   }
+
+  Future<void> _loadData() async {
+  setState(() {
+    isLoading = true;
+  });
+
+  try {
+    // Fetch milk sales data
+    final milkSalesSnapshot = await FirebaseFirestore.instance
+        .collection('milk_production')
+        .doc(_adminEmail)
+        .collection('entries')
+        .get();
+
+    final fetchedData = milkSalesSnapshot.docs.map((doc) => doc.data()).toList();
+
+    
+    if (mounted) {
+      setState(() {
+        this.fetchedData = fetchedData;
+        
+      });
+    }
+  } catch (e) {
+    print('Error fetching data: $e');
+    if (mounted) {
+      setState(() {
+        this.fetchedData = [];
+        
+      });
+    }
+  } finally {
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+}
+
 
   Future<void> _fetchFarmName() async {
     try {
@@ -700,117 +742,65 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildOrderStatsCard(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(context, '/milkSales');
-      },
-      child: Card(
-        shape: RoundedRectangleBorder(
+Widget _buildOrderStatsCard(BuildContext context) {
+  return GestureDetector(
+    onTap: () {
+      Navigator.pushNamed(context, '/milkSales');
+    },
+    child: Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      margin: const EdgeInsets.all(8.0),
+      child: Container(
+        decoration: BoxDecoration(
+          image: const DecorationImage(
+            image: AssetImage(
+                'assets/abstract-light-blue-wide-background-with-radial-blue-gradients-vector.jpg'),
+            fit: BoxFit.cover,
+          ),
           borderRadius: BorderRadius.circular(12),
         ),
-        margin: const EdgeInsets.all(8.0),
-        child: Container(
-          decoration: BoxDecoration(
-            image: const DecorationImage(
-              image: AssetImage(
-                  'assets/abstract-light-blue-wide-background-with-radial-blue-gradients-vector.jpg'),
-              fit: BoxFit.cover,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Text(
-                  'Milk Sales for this week',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text(
+                'Milk Sales for this week',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
                 ),
+              ),
+              if (isLoading)
+                const Center(child: CircularProgressIndicator())
+              else if (fetchedData.isEmpty)
+                const Center(child: Text('No data available'))
+              else
                 Container(
                   margin: const EdgeInsets.only(top: 16.0),
                   height: 300.0,
-                  child: chartData.isNotEmpty
-                      ? LineChart(
-                          LineChartData(
-                            gridData: FlGridData(show: false),
-                            titlesData: FlTitlesData(
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 30,
-                                  getTitlesWidget: (value, meta) {
-                                    int index = value.toInt();
-                                    if (index >= 1 && index <= 7) {
-                                      return Text([
-                                        'Mon',
-                                        'Tue',
-                                        'Wed',
-                                        'Thu',
-                                        'Fri',
-                                        'Sat',
-                                        'Sun'
-                                      ][index - 1]);
-                                    }
-                                    return const Text('');
-                                  },
-                                ),
-                              ),
-                              leftTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 50,
-                                  getTitlesWidget: (value, meta) {
-                                    return Text(value.toInt().toString());
-                                  },
-                                ),
-                              ),
-                              rightTitles: AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                            ),
-                            borderData: FlBorderData(show: false),
-                            lineBarsData: [
-                              LineChartBarData(
-                                spots: chartData,
-                                isCurved: true,
-                                color: Colors.green,
-                                dotData: FlDotData(show: false),
-                                belowBarData: BarAreaData(show: false),
-                              ),
-                            ],
-                            minX: 1,
-                            maxX: 7,
-                            minY: 0,
-                            maxY: chartData.isNotEmpty
-                                ? chartData
-                                        .map((spot) => spot.y)
-                                        .reduce((a, b) => a > b ? a : b) *
-                                    1.2
-                                : 1, // Default value if chartData is empty
-                          ),
-                        )
-                      : Center(child: Text('No data available')),
-                ),
-                const SizedBox(height: 8.0),
-                const Text(
-                  'Tap for more details',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontStyle: FontStyle.italic,
+                  child: LineChartSample2(
+                    fetchedData: fetchedData, // Pass the fetched milk sales data here
+                    collectionName: 'milk_production', // Indicating this is for milk sales
                   ),
                 ),
-              ],
-            ),
+              const SizedBox(height: 8.0),
+              const Text(
+                'Tap for more details',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildExpenseOverviewCard(BuildContext context) {
     // Determine the highest expense to set color thresholds
