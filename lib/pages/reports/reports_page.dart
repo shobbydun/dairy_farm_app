@@ -60,88 +60,88 @@ class _ReportsPageState extends State<ReportsPage> {
       print('Error fetching summary data: $e');
     }
   }
+Future<void> _loadData() async {
+  setState(() {
+    isLoading = true;
+  });
 
-  Future<void> _loadData() async {
-    setState(() {
-      isLoading = true;
-    });
+  try {
+    // Fetch milk sales data
+    final milkSalesSnapshot = await FirebaseFirestore.instance
+        .collection('milk_production')
+        .doc(_adminEmail)
+        .collection('entries')
+        .get();
 
-    try {
-      // Fetch milk sales data
-      final milkSalesSnapshot = await FirebaseFirestore.instance
-          .collection('milk_sales')
-          .doc(_adminEmail)
-          .collection('entries')
-          .get();
+    final fetchedData = milkSalesSnapshot.docs.map((doc) => doc.data()).toList();
 
-      final fetchedData =
-          milkSalesSnapshot.docs.map((doc) => doc.data()).toList();
+    // Print fetched milk sales data
+    
 
-      // Fetch cow sales data
-      final cowSalesSnapshot = await FirebaseFirestore.instance
-          .collection('cow_sales')
-          .doc(_adminEmail)
-          .collection('entries')
-          .get();
+    // Fetch cow sales data
+    final cowSalesSnapshot = await FirebaseFirestore.instance
+        .collection('cow_sales')
+        .doc(_adminEmail)
+        .collection('entries')
+        .get();
 
-      final cowSalesData =
-          cowSalesSnapshot.docs.map((doc) => doc.data()).toList();
+    final cowSalesData = cowSalesSnapshot.docs.map((doc) => doc.data()).toList();
 
-      // Fetch cattle count
-      final cattleSnapshot = await FirebaseFirestore.instance
-          .collection('cattle')
-          .doc(_adminEmail)
-          .collection('entries')
-          .get();
+    // Fetch cattle count
+    final cattleSnapshot = await FirebaseFirestore.instance
+        .collection('cattle')
+        .doc(_adminEmail)
+        .collection('entries')
+        .get();
 
-      final cattleCount = cattleSnapshot.docs.length;
+    final cattleCount = cattleSnapshot.docs.length;
 
-      // Fetch workers count
-      final workersSnapshot = await FirebaseFirestore.instance
-          .collection('workers')
-          .doc(_adminEmail)
-          .collection('entries')
-          .get();
+    // Fetch workers count
+    final workersSnapshot = await FirebaseFirestore.instance
+        .collection('workers')
+        .doc(_adminEmail)
+        .collection('entries')
+        .get();
 
-      final workersCount = workersSnapshot.docs.length;
+    final workersCount = workersSnapshot.docs.length;
 
-      // Fetch calves count
-      final calvesSnapshot = await FirebaseFirestore.instance
-          .collection('calves')
-          .doc(_adminEmail)
-          .collection('entries')
-          .get();
+    // Fetch calves count
+    final calvesSnapshot = await FirebaseFirestore.instance
+        .collection('calves')
+        .doc(_adminEmail)
+        .collection('entries')
+        .get();
 
-      final calvesCount = calvesSnapshot.docs.length;
+    final calvesCount = calvesSnapshot.docs.length;
 
-      if (mounted) {
-        setState(() {
-          this.fetchedData = fetchedData;
-          this.cowSalesData = cowSalesData;
-          this.cattleCount = cattleCount;
-          this.workersCount = workersCount;
-          this.calvesCount = calvesCount;
-        });
-      }
-    } catch (e) {
-      print('Error fetching data: $e');
-      if (mounted) {
-        setState(() {
-          this.fetchedData = [];
-          this.cowSalesData = [];
-          this.cattleCount = 0;
-          this.workersCount = 0;
-          this.calvesCount = 0;
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
-      }
+    if (mounted) {
+      setState(() {
+        this.fetchedData = fetchedData;
+        this.cowSalesData = cowSalesData;
+        this.cattleCount = cattleCount;
+        this.workersCount = workersCount;
+        this.calvesCount = calvesCount;
+      });
+    }
+  } catch (e) {
+    print('Error fetching data: $e');
+    if (mounted) {
+      setState(() {
+        this.fetchedData = [];
+        this.cowSalesData = [];
+        this.cattleCount = 0;
+        this.workersCount = 0;
+        this.calvesCount = 0;
+      });
+    }
+  } finally {
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
+}
 
   Future<void> _fetchData() async {
     User? user = FirebaseAuth.instance.currentUser;
@@ -708,117 +708,84 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   // Order stats card
-  Widget _buildOrderStatsCard(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(context, '/milkSales');
-      },
-      child: Card(
-        shape: RoundedRectangleBorder(
+Widget _buildOrderStatsCard(BuildContext context) {
+  return GestureDetector(
+    onTap: () {
+      Navigator.pushNamed(context, '/milkSales');
+    },
+    child: Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      margin: const EdgeInsets.all(8.0),
+      child: Container(
+        decoration: BoxDecoration(
+          image: const DecorationImage(
+            image: AssetImage(
+                'assets/abstract-light-blue-wide-background-with-radial-blue-gradients-vector.jpg'),
+            fit: BoxFit.cover,
+          ),
           borderRadius: BorderRadius.circular(12),
         ),
-        margin: const EdgeInsets.all(8.0),
-        child: Container(
-          decoration: BoxDecoration(
-            image: const DecorationImage(
-              image: AssetImage(
-                  'assets/abstract-light-blue-wide-background-with-radial-blue-gradients-vector.jpg'),
-              fit: BoxFit.cover,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Text(
-                  'Milk Sales for this week',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text(
+                'Milk Sales for this week',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
                 ),
+              ),
+              if (isLoading)
+                const Center(child: CircularProgressIndicator())
+              else if (fetchedData.isEmpty)
+                const Center(child: Text('No data available'))
+              else
                 Container(
                   margin: const EdgeInsets.only(top: 16.0),
                   height: 300.0,
-                  child: chartData.isNotEmpty
-                      ? LineChart(
-                          LineChartData(
-                            gridData: FlGridData(show: false),
-                            titlesData: FlTitlesData(
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 30,
-                                  getTitlesWidget: (value, meta) {
-                                    int index = value.toInt();
-                                    if (index >= 1 && index <= 7) {
-                                      return Text([
-                                        'Mon',
-                                        'Tue',
-                                        'Wed',
-                                        'Thu',
-                                        'Fri',
-                                        'Sat',
-                                        'Sun'
-                                      ][index - 1]);
-                                    }
-                                    return const Text('');
-                                  },
-                                ),
-                              ),
-                              leftTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 50,
-                                  getTitlesWidget: (value, meta) {
-                                    return Text(value.toInt().toString());
-                                  },
-                                ),
-                              ),
-                              rightTitles: AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                            ),
-                            borderData: FlBorderData(show: false),
-                            lineBarsData: [
-                              LineChartBarData(
-                                spots: chartData,
-                                isCurved: true,
-                                color: Colors.green,
-                                dotData: FlDotData(show: false),
-                                belowBarData: BarAreaData(show: false),
-                              ),
-                            ],
-                            minX: 1,
-                            maxX: 7,
-                            minY: 0,
-                            maxY: chartData.isNotEmpty
-                                ? chartData
-                                        .map((spot) => spot.y)
-                                        .reduce((a, b) => a > b ? a : b) *
-                                    1.2
-                                : 1, // Default value if chartData is empty
-                          ),
-                        )
-                      : Center(child: Text('No data available')),
-                ),
-                const SizedBox(height: 8.0),
-                const Text(
-                  'Tap for more details',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontStyle: FontStyle.italic,
+                  child: LineChartSample2(
+                    fetchedData: fetchedData, // Pass the fetched milk sales data here
+                    collectionName: 'milk_production', // Indicating this is for milk sales
                   ),
                 ),
-              ],
-            ),
+              const SizedBox(height: 8.0),
+              const Text(
+                'Tap for more details',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
+Future<List<Map<String, dynamic>>> fetchMilkSalesData() async {
+  List<Map<String, dynamic>> data = [];
+  
+  // Fetch the collection 'milk_sales' from Firestore based on the authenticated user's UID
+  String uid = FirebaseAuth.instance.currentUser!.uid;
+  CollectionReference milkSalesCollection = FirebaseFirestore.instance
+      .collection('users')
+      .doc(uid)
+      .collection('milk_sales');
+
+  QuerySnapshot querySnapshot = await milkSalesCollection.get();
+
+  // Map the query result into a list of maps
+  data = querySnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+  
+  return data;
+}
+
 
   Widget _buildWeekExpenseOverviewCard(BuildContext context) {
     // Determine the highest expense to set color thresholds
