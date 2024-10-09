@@ -146,6 +146,13 @@ class _SidebarMenuState extends State<SidebarMenu> {
                           Navigator.pushNamed(context, '/cattleForm');
                         },
                       ),
+                      _buildSubMenuItem(
+                        text: 'Cow Sales',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushNamed(context, '/cowSales');
+                        },
+                      ),
                     ],
                   ),
                   _buildExpandableMenuItem(

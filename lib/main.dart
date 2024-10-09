@@ -16,6 +16,7 @@ import 'package:dairy_harbor/pages/manage_cattle/cattle_form.dart';
 import 'package:dairy_harbor/pages/manage_cattle/cattle_list_page.dart';
 import 'package:dairy_harbor/pages/manage_cattle/cattle_profile_page.dart';
 import 'package:dairy_harbor/pages/manage_cattle/main_cattle_page.dart';
+import 'package:dairy_harbor/pages/manage_cattle/cow_sales.dart';
 import 'package:dairy_harbor/pages/milk/daily_production_page.dart';
 import 'package:dairy_harbor/pages/milk/milk_distribution_sales.dart';
 import 'package:dairy_harbor/pages/procedures/artificial_insemination_page.dart';
@@ -133,6 +134,8 @@ class MyApp extends StatelessWidget {
             return _buildAsyncRouteCattleForm(settings);
           case '/cattleListPage':
             return _buildAsyncRouteCattleList(settings);
+          case'/cowSales':
+            return _buildAsyncRouteCowSales(settings);
           case '/artificialInsemination':
             return _buildAsyncRouteAI(settings);
 
@@ -236,6 +239,13 @@ class MyApp extends StatelessWidget {
     final adminEmailFuture = getAdminEmailFromFirestore();
     return MaterialPageRoute(
       builder: (context) => CattleForm(adminEmailFuture: adminEmailFuture),
+    );
+  }
+
+  MaterialPageRoute _buildAsyncRouteCowSales(RouteSettings settings) {
+    final adminEmailFuture = getAdminEmailFromFirestore();
+    return MaterialPageRoute(
+      builder: (context) => CowSalesPage(adminEmailFuture: adminEmailFuture),
     );
   }
 
