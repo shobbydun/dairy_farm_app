@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -9,7 +10,8 @@ import 'package:intl/intl.dart';
 class CattleForm extends StatefulWidget {
   final Future<String?> adminEmailFuture;
 
-  const CattleForm({Key? key, required this.adminEmailFuture}) : super(key: key);
+  const CattleForm({Key? key, required this.adminEmailFuture})
+      : super(key: key);
 
   @override
   _CattleFormState createState() => _CattleFormState();
@@ -21,12 +23,19 @@ class _CattleFormState extends State<CattleForm> {
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _dobController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _genderController = TextEditingController();
-  final TextEditingController _breedController = TextEditingController();
-  final TextEditingController _fatherBreedController = TextEditingController();
-  final TextEditingController _motherBreedController = TextEditingController();
-  final TextEditingController _methodBredController = TextEditingController();
-  final TextEditingController _statusController = TextEditingController();
+  
+  String? _selectedGender;
+  String? _selectedBreed;
+  String? _selectedFatherBreed;
+  String? _selectedMotherBreed;
+  String? _selectedMethodBred;
+  String? _selectedStatus;
+
+  final List<String> breeds = ['Holstein', 'Jersey', 'Guernsey', 'Ayrshire', 'Brown Swiss', 'Milking Shorthorn', 'Normande', 'Piedmontese'];
+  final List<String> methods = ['Natural', 'Artificial Insemination'];
+  final List<String> statuses = ['Healthy', 'Sick', 'Sold', 'Deceased'];
+  final List<String> genders = ['Male', 'Female'];
+
   bool _isLoading = false;
   String? _adminEmail;
 
@@ -38,16 +47,20 @@ class _CattleFormState extends State<CattleForm> {
 
   Future<void> _fetchAdminEmail() async {
     _adminEmail = await widget.adminEmailFuture;
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _pickImage() async {
     try {
       final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
       if (pickedFile != null) {
-        setState(() {
-          _image = File(pickedFile.path);
-        });
+        if (mounted) {
+          setState(() {
+            _image = File(pickedFile.path);
+          });
+        }
       }
     } catch (e) {
       print('Error picking image: $e');
@@ -92,17 +105,20 @@ class _CattleFormState extends State<CattleForm> {
 
       String currentUserEmail = FirebaseAuth.instance.currentUser?.email ?? '';
 
-
-      await FirebaseFirestore.instance.collection('cattle').doc(_adminEmail).collection('entries').add({
+      await FirebaseFirestore.instance
+          .collection('cattle')
+          .doc(_adminEmail)
+          .collection('entries')
+          .add({
         'admin_email': _adminEmail,
         'name': _nameController.text,
         'dob': _dobController.text,
-        'gender': _genderController.text,
-        'breed': _breedController.text,
-        'father_breed': _fatherBreedController.text,
-        'mother_breed': _motherBreedController.text,
-        'method_bred': _methodBredController.text,
-        'status': _statusController.text,
+        'gender': _selectedGender,
+        'breed': _selectedBreed,
+        'father_breed': _selectedFatherBreed,
+        'mother_breed': _selectedMotherBreed,
+        'method_bred': _selectedMethodBred,
+        'status': _selectedStatus,
         'image_url': imageUrl,
         'created_at': Timestamp.fromDate(DateTime.now()),
         'filled_in_by': currentUserEmail,
@@ -124,9 +140,11 @@ class _CattleFormState extends State<CattleForm> {
         );
       }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -135,12 +153,12 @@ class _CattleFormState extends State<CattleForm> {
       _image = null;
       _dobController.clear();
       _nameController.clear();
-      _genderController.clear();
-      _breedController.clear();
-      _fatherBreedController.clear();
-      _motherBreedController.clear();
-      _methodBredController.clear();
-      _statusController.clear();
+      _selectedGender = null;
+      _selectedBreed = null;
+      _selectedFatherBreed = null;
+      _selectedMotherBreed = null;
+      _selectedMethodBred = null;
+      _selectedStatus = null;
     });
   }
 
@@ -148,6 +166,13 @@ class _CattleFormState extends State<CattleForm> {
     return _image == null
         ? const Text('No image selected.')
         : Image.file(_image!, height: 200, width: 200, fit: BoxFit.cover);
+  }
+
+  @override
+  void dispose() {
+    _dobController.dispose();
+    _nameController.dispose();
+    super.dispose();
   }
 
   @override
@@ -191,19 +216,44 @@ class _CattleFormState extends State<CattleForm> {
                       const SizedBox(height: 20),
                       _buildTextField('Cow\'s Name', _nameController, Icons.pets),
                       _buildDatePickerField(),
-                      _buildTextField('Gender', _genderController, Icons.person),
-                      _buildTextField('Breed', _breedController, Icons.tag),
-                      _buildTextField('Father\'s Breed', _fatherBreedController, Icons.family_restroom),
-                      _buildTextField('Mother\'s Breed', _motherBreedController, Icons.family_restroom),
-                      _buildTextField('Method Bred', _methodBredController, Icons.science),
-                      _buildTextField('Status', _statusController, Icons.health_and_safety),
+                      _buildDropdown('Gender', genders, (value) {
+                        setState(() {
+                          _selectedGender = value;
+                        });
+                      }),
+                      _buildDropdown('Breed', breeds, (value) {
+                        setState(() {
+                          _selectedBreed = value;
+                        });
+                      }),
+                      _buildDropdown('Father\'s Breed', breeds, (value) {
+                        setState(() {
+                          _selectedFatherBreed = value;
+                        });
+                      }),
+                      _buildDropdown('Mother\'s Breed', breeds, (value) {
+                        setState(() {
+                          _selectedMotherBreed = value;
+                        });
+                      }),
+                      _buildDropdown('Method Bred', methods, (value) {
+                        setState(() {
+                          _selectedMethodBred = value;
+                        });
+                      }),
+                      _buildDropdown('Status', statuses, (value) {
+                        setState(() {
+                          _selectedStatus = value;
+                        });
+                      }),
                       const SizedBox(height: 20),
                       Center(
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _uploadImageAndSaveData,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blueAccent,
-                            padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 32.0),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 14.0, horizontal: 32.0),
                             textStyle: const TextStyle(fontSize: 18),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12.0),
@@ -266,22 +316,24 @@ class _CattleFormState extends State<CattleForm> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, IconData icon) {
+  Widget _buildDropdown(String label, List<String> items, Function(String?) onChanged) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextField(
-        controller: controller,
+      child: DropdownButtonFormField<String>(
         decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: Colors.blue.shade700),
           labelText: label,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12.0),
           ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.blue.shade700, width: 2.0),
-            borderRadius: BorderRadius.circular(12.0),
-          ),
         ),
+        value: null,
+        onChanged: onChanged,
+        items: items.map((String item) {
+          return DropdownMenuItem<String>(
+            value: item,
+            child: Text(item),
+          );
+        }).toList(),
       ),
     );
   }
@@ -296,6 +348,27 @@ class _CattleFormState extends State<CattleForm> {
         decoration: InputDecoration(
           prefixIcon: const Icon(Icons.calendar_today, color: Colors.blue),
           labelText: 'Date of Birth',
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.blue.shade700, width: 2.0),
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+      String label, TextEditingController controller, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon, color: Colors.blue.shade700),
+          labelText: label,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12.0),
           ),

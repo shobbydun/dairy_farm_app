@@ -1,10 +1,11 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'package:intl/intl.dart';
 
 class CattleProfilePage extends StatefulWidget {
   final String cattleId;
@@ -233,6 +234,8 @@ class _CattleProfilePageState extends State<CattleProfilePage> {
   }
 }
 
+
+
 class EditCattlePage extends StatefulWidget {
   final String cattleId;
   final Map<String, dynamic> initialData;
@@ -255,45 +258,39 @@ class _EditCattlePageState extends State<EditCattlePage> {
   final ImagePicker _picker = ImagePicker();
   late final TextEditingController _nameController;
   late final TextEditingController _dobController;
-  late final TextEditingController _genderController;
-  late final TextEditingController _breedController;
-  late final TextEditingController _fatherBreedController;
-  late final TextEditingController _motherBreedController;
-  late final TextEditingController _methodBredController;
-  late final TextEditingController _statusController;
+
+  String? _selectedGender;
+  String? _selectedBreed;
+  String? _selectedFatherBreed;
+  String? _selectedMotherBreed;
+  String? _selectedMethodBred;
+  String? _selectedStatus;
 
   String? _adminEmail;
+
+  final List<String> breeds = ['Holstein', 'Jersey', 'Guernsey', 'Ayrshire', 'Brown Swiss', 'Milking Shorthorn', 'Normande', 'Piedmontese'];
+  final List<String> methods = ['Natural', 'Artificial Insemination'];
+  final List<String> statuses = ['Healthy', 'Sick', 'Sold', 'Deceased'];
+  final List<String> genders = ['Male', 'Female'];
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialData['name']);
     _dobController = TextEditingController(text: widget.initialData['dob']);
-    _genderController =
-        TextEditingController(text: widget.initialData['gender']);
-    _breedController = TextEditingController(text: widget.initialData['breed']);
-    _fatherBreedController =
-        TextEditingController(text: widget.initialData['father_breed']);
-    _motherBreedController =
-        TextEditingController(text: widget.initialData['mother_breed']);
-    _methodBredController =
-        TextEditingController(text: widget.initialData['method_bred']);
-    _statusController =
-        TextEditingController(text: widget.initialData['status']);
+    _selectedGender = widget.initialData['gender'];
+    _selectedBreed = widget.initialData['breed'];
+    _selectedFatherBreed = widget.initialData['father_breed'];
+    _selectedMotherBreed = widget.initialData['mother_breed'];
+    _selectedMethodBred = widget.initialData['method_bred'];
+    _selectedStatus = widget.initialData['status'];
     _fetchAdminEmail();
   }
 
   @override
   void dispose() {
-    // Dispose of the controllers to free up resources
     _nameController.dispose();
     _dobController.dispose();
-    _genderController.dispose();
-    _breedController.dispose();
-    _fatherBreedController.dispose();
-    _motherBreedController.dispose();
-    _methodBredController.dispose();
-    _statusController.dispose();
     super.dispose();
   }
 
@@ -358,12 +355,12 @@ class _EditCattlePageState extends State<EditCattlePage> {
           .update({
         'name': _nameController.text,
         'dob': _dobController.text,
-        'gender': _genderController.text,
-        'breed': _breedController.text,
-        'father_breed': _fatherBreedController.text,
-        'mother_breed': _motherBreedController.text,
-        'method_bred': _methodBredController.text,
-        'status': _statusController.text,
+        'gender': _selectedGender,
+        'breed': _selectedBreed,
+        'father_breed': _selectedFatherBreed,
+        'mother_breed': _selectedMotherBreed,
+        'method_bred': _selectedMethodBred,
+        'status': _selectedStatus,
         'imageUrl': imageUrl,
         'updatedAt': Timestamp.now(),
         'filled_in_by': currentUserEmail,
@@ -406,6 +403,28 @@ class _EditCattlePageState extends State<EditCattlePage> {
     }
   }
 
+  Widget _buildDropdown(String label, List<String> items, String? value, Function(String?) onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: DropdownButtonFormField<String>(
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+        ),
+        value: value,
+        onChanged: onChanged,
+        items: items.map((String item) {
+          return DropdownMenuItem<String>(
+            value: item,
+            child: Text(item),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -443,25 +462,42 @@ class _EditCattlePageState extends State<EditCattlePage> {
                       const SizedBox(height: 20),
                       _buildImageDisplay(),
                       const SizedBox(height: 20),
-                      _buildTextField(
-                          'Cow\'s Name', _nameController, Icons.pets),
+                      _buildTextField('Cow\'s Name', _nameController, Icons.pets),
                       _buildDatePickerField(),
-                      _buildTextField(
-                          'Gender', _genderController, Icons.person),
-                      _buildTextField('Breed', _breedController, Icons.tag),
-                      _buildTextField('Father\'s Breed', _fatherBreedController,
-                          Icons.family_restroom),
-                      _buildTextField('Mother\'s Breed', _motherBreedController,
-                          Icons.family_restroom),
-                      _buildTextField(
-                          'Method Bred', _methodBredController, Icons.science),
-                      _buildTextField(
-                          'Status', _statusController, Icons.health_and_safety),
+                      _buildDropdown('Gender', genders, _selectedGender, (value) {
+                        setState(() {
+                          _selectedGender = value;
+                        });
+                      }),
+                      _buildDropdown('Breed', breeds, _selectedBreed, (value) {
+                        setState(() {
+                          _selectedBreed = value;
+                        });
+                      }),
+                      _buildDropdown('Father\'s Breed', breeds, _selectedFatherBreed, (value) {
+                        setState(() {
+                          _selectedFatherBreed = value;
+                        });
+                      }),
+                      _buildDropdown('Mother\'s Breed', breeds, _selectedMotherBreed, (value) {
+                        setState(() {
+                          _selectedMotherBreed = value;
+                        });
+                      }),
+                      _buildDropdown('Method Bred', methods, _selectedMethodBred, (value) {
+                        setState(() {
+                          _selectedMethodBred = value;
+                        });
+                      }),
+                      _buildDropdown('Status', statuses, _selectedStatus, (value) {
+                        setState(() {
+                          _selectedStatus = value;
+                        });
+                      }),
                       const SizedBox(height: 20),
                       Center(
                         child: ElevatedButton(
-                          onPressed:
-                              _isLoading ? null : _uploadImageAndSaveData,
+                          onPressed: _isLoading ? null : _uploadImageAndSaveData,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blueAccent,
                             padding: const EdgeInsets.symmetric(
@@ -475,11 +511,9 @@ class _EditCattlePageState extends State<EditCattlePage> {
                               ? const SizedBox(
                                   width: 24,
                                   height: 24,
-                                  child: CircularProgressIndicator(
-                                      color: Colors.white),
+                                  child: CircularProgressIndicator(color: Colors.white),
                                 )
-                              : const Text('Save Changes',
-                                  style: TextStyle(color: Colors.white)),
+                              : const Text('Save Changes', style: TextStyle(color: Colors.white)),
                         ),
                       ),
                     ],
@@ -503,8 +537,7 @@ class _EditCattlePageState extends State<EditCattlePage> {
       child: ElevatedButton.icon(
         onPressed: _pickImage,
         icon: const Icon(Icons.photo_camera, size: 24, color: Colors.white),
-        label:
-            const Text('Upload Photo', style: TextStyle(color: Colors.white)),
+        label: const Text('Upload Photo', style: TextStyle(color: Colors.white)),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.blueAccent,
           padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 20.0),
@@ -517,8 +550,7 @@ class _EditCattlePageState extends State<EditCattlePage> {
     );
   }
 
-  Widget _buildTextField(
-      String label, TextEditingController controller, IconData icon) {
+  Widget _buildTextField(String label, TextEditingController controller, IconData icon) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(
@@ -560,3 +592,4 @@ class _EditCattlePageState extends State<EditCattlePage> {
     );
   }
 }
+

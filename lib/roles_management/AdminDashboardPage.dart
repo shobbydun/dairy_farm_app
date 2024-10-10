@@ -21,7 +21,6 @@ const Map<String, List<String>> rolePermissions = {
 
 List<String> getAllRoles() {
   return [
-    'admin',
     'manager',
     'staff',
     'operator',
@@ -30,9 +29,6 @@ List<String> getAllRoles() {
     'analyst',
     'maintenance',
     'veterinarian',
-    'hr',
-    'employee',
-    'owner',
   ];
 }
 
@@ -84,15 +80,32 @@ Future<void> fetchUsers() async {
           .where('adminEmail', isEqualTo: adminEmail)
           .get();
 
-      // Combine the results
-      final allUsersDocs = {...farmUsersCollection.docs, ...adminUsersCollection.docs};
+      // Use a Set to ensure unique users
+      final uniqueUserIds = <String>{};
+      final allUsers = <Map<String, dynamic>>[];
+
+      // Add users from farmUsersCollection
+      for (var doc in farmUsersCollection.docs) {
+        final userData = {'id': doc.id, ...doc.data() as Map<String, dynamic>};
+        if (uniqueUserIds.add(userData['id'])) {
+          allUsers.add(userData);
+        }
+      }
+
+      // Add users from adminUsersCollection
+      for (var doc in adminUsersCollection.docs) {
+        final userData = {'id': doc.id, ...doc.data() as Map<String, dynamic>};
+        if (uniqueUserIds.add(userData['id'])) {
+          allUsers.add(userData);
+        }
+      }
+
+      // Exclude the current admin
+      allUsers.removeWhere((user) => user['id'] == currentAdmin!['id']);
 
       if (mounted) {
         setState(() {
-          users = allUsersDocs.map((doc) {
-            return {'id': doc.id, ...doc.data() as Map<String, dynamic>};
-          }).toList();
-          users.removeWhere((user) => user['id'] == currentAdmin!['id']);
+          users = allUsers;
           isLoading = false;
         });
       }
@@ -112,6 +125,7 @@ Future<void> fetchUsers() async {
     print("Error fetching users: $e");
   }
 }
+
 
   Future<void> updateUserRole(String userId, String newRole) async {
     try {

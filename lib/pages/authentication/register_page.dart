@@ -3,9 +3,7 @@ import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dairy_harbor/components/my_button.dart';
 import 'package:dairy_harbor/components/my_textfield.dart';
-import 'package:dairy_harbor/components/square_tile.dart';
 import 'package:dairy_harbor/roles_management/PendingApprovalPage.dart';
-import 'package:dairy_harbor/services_functions/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -249,7 +247,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                     },
                                     items: <String>[
                                       'manager', 'staff', 'operator', 'milkman',
-                                      'veterinarian', 'maintenance', 'sales', 'hr', 'analyst', 'admin',
+                                      'veterinarian', 'maintenance', 'sales', 'hr', 'analyst',
                                     ].map<DropdownMenuItem<String>>((String value) {
                                       return DropdownMenuItem<String>(
                                         value: value,
@@ -273,54 +271,54 @@ class _RegisterPageState extends State<RegisterPage> {
                         ],
                       ),
 
-                      const SizedBox(height: 25),
+                      const SizedBox(height: 35),
                       MyButton(
                         text: "Sign up",
                         onTap: signUserUp,
                       ),
                       const SizedBox(height: 50),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 25.0),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Divider(
-                                thickness: 0.5,
-                                color: Colors.grey[400],
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
-                              child: Text(
-                                "Or continue with, ",
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
-                            Expanded(
-                              child: Divider(
-                                thickness: 0.5,
-                                color: Colors.grey[400],
-                              ),
-                            )
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SquareTile(
-                            imagePath: 'assets/google.png',
-                            onTap: () => AuthService().signInWithGoogle(),
-                          ),
-                          const SizedBox(width: 25),
-                          SquareTile(
-                            imagePath: 'assets/apple.png',
-                            onTap: () => AuthService().signInWithApple(),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 50),
+                      // Padding(
+                      //   padding: const EdgeInsets.symmetric(horizontal: 25.0),
+                      //   child: Row(
+                      //     children: [
+                      //       Expanded(
+                      //         child: Divider(
+                      //           thickness: 0.5,
+                      //           color: Colors.grey[400],
+                      //         ),
+                      //       ),
+                      //       Padding(
+                      //         padding: const EdgeInsets.symmetric(horizontal: 10),
+                      //         child: Text(
+                      //           "Or continue with, ",
+                      //           style: TextStyle(color: Colors.white),
+                      //         ),
+                      //       ),
+                      //       Expanded(
+                      //         child: Divider(
+                      //           thickness: 0.5,
+                      //           color: Colors.grey[400],
+                      //         ),
+                      //       )
+                      //     ],
+                      //   ),
+                      // ),
+                      // const SizedBox(height: 20),
+                      // Row(
+                      //   mainAxisAlignment: MainAxisAlignment.center,
+                      //   children: [
+                      //     SquareTile(
+                      //       imagePath: 'assets/google.png',
+                      //       onTap: () => AuthService().signInWithGoogle(),
+                      //     ),
+                      //     const SizedBox(width: 25),
+                      //     SquareTile(
+                      //       imagePath: 'assets/apple.png',
+                      //       onTap: () => AuthService().signInWithApple(),
+                      //     ),
+                      //   ],
+                      // ),
+                      const SizedBox(height: 10),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

@@ -1,8 +1,8 @@
 const Map<String, List<String>> rolePermissions = {
+  '/dailyProduction': ['admin', 'manager', 'staff', 'operator', 'milkman'],
   '/milkSales': ['admin', 'manager', 'sales'],
-  '/dailyProduction': ['admin', 'manager', 'staff', 'operator','milkman'],
+  '/cattleForm': ['admin', 'manager', 'staff'],
   '/cattleListPage': ['admin', 'manager', 'staff'],
-  '/reports': ['admin', 'manager', 'analyst'],
   '/adminWages': ['admin', 'manager'],
   '/machinery': ['admin', 'manager', 'maintenance'],
   '/feeds': ['admin', 'manager', 'staff'],
@@ -10,9 +10,8 @@ const Map<String, List<String>> rolePermissions = {
   '/medicine': ['admin', 'manager', 'veterinarian'],
   //'/notification': ['admin', 'manager', 'staff'],
   '/workerList': ['admin', 'manager'],
+  '/reports': ['admin', 'manager', 'analyst'],
   //'/workerProfile': ['admin', 'manager', 'hr'],
-  
-  '/cattleForm': ['admin', 'manager', 'staff'],
 };
 
 bool canAccessPage(String userRole, String route) {
